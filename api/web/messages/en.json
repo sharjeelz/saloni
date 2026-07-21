@@ -71,6 +71,7 @@
       "phone": "Phone",
       "vatNumber": "VAT number",
       "brandColor": "Brand color",
+      "brandColorHint": "Used on your public booking page & “Book Now” button — not the console.",
       "timezone": "Timezone",
       "locale": "Default language",
       "logo": "Logo URL",

@@ -92,6 +92,7 @@ export default function SettingsPage() {
               <Input dir="ltr" value={form.brand_color ?? ""} placeholder="#1E5C4A" onChange={set("brand_color")} />
             </div>
           </Field>
+          <p className="-mt-1 text-xs text-muted">{t("brandColorHint")}</p>
 
           {err && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{err}</p>}
           <div className="mt-1 flex justify-end">
