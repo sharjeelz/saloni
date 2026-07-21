@@ -35,5 +35,49 @@
     "language": "اللغة",
     "arabic": "العربية",
     "english": "English"
+  },
+  "app": {
+    "brand": "صالوني",
+    "nav": {
+      "dashboard": "الرئيسية",
+      "calendar": "المواعيد",
+      "services": "الخدمات",
+      "staff": "الفريق",
+      "branches": "الفروع",
+      "billing": "الاشتراك",
+      "logout": "تسجيل الخروج"
+    },
+    "login": {
+      "title": "أهلاً بعودتك",
+      "subtitle": "سجّلي الدخول إلى لوحة صالونك",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "submit": "تسجيل الدخول",
+      "signingIn": "جارٍ الدخول…",
+      "error": "البريد أو كلمة المرور غير صحيحة.",
+      "tagline": "أدِر صالونك. واملأ كل كرسي."
+    },
+    "dashboard": {
+      "title": "ملخّص اليوم",
+      "greeting": "مرحباً، {name}",
+      "occupancy": "إشغال الكراسي",
+      "ofDay": "من مواعيد اليوم",
+      "revenueCollected": "المحصّل اليوم",
+      "revenueExpected": "المتوقّع اليوم",
+      "bookings": "حجوزات اليوم",
+      "statusConfirmed": "مؤكّد",
+      "statusDone": "منجز",
+      "statusNoShow": "لم يحضر",
+      "statusCancelled": "ملغى",
+      "byStaff": "حسب الموظف",
+      "byService": "حسب الخدمة",
+      "nextUp": "المواعيد القادمة",
+      "bookingsCol": "حجز",
+      "empty": "لا حجوزات لهذا اليوم بعد.",
+      "emptyUpcoming": "لا مواعيد على الجدول.",
+      "loadError": "تعذّر تحميل اللوحة.",
+      "retry": "إعادة المحاولة",
+      "with": "مع"
+    }
   }
 }

@@ -1,0 +1,214 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { get } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+
+type Dashboard = {
+  range: { from: string; to: string; timezone: string };
+  totals: { bookings: number; by_status: Record<string, number> };
+  revenue: { collected: number; expected: number; currency: string };
+  by_staff: { staff_id: number; staff: string; bookings: number; revenue: number }[];
+  by_service: { service_id: number; service: string; bookings: number; revenue: number }[];
+  upcoming: {
+    id: number;
+    starts_at: string;
+    customer: { name: string } | null;
+    service: { name: string } | null;
+    staff: { name: string } | null;
+  }[];
+};
+
+const STATUS_META: Record<string, { key: string; color: string }> = {
+  confirmed: { key: "statusConfirmed", color: "var(--color-accent)" },
+  done: { key: "statusDone", color: "var(--color-gold)" },
+  no_show: { key: "statusNoShow", color: "var(--color-warn)" },
+  cancelled: { key: "statusCancelled", color: "var(--color-muted)" },
+};
+
+export default function DashboardPage() {
+  const t = useTranslations("app.dashboard");
+  const locale = useLocale();
+  const { user } = useAuth();
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    setLoading(true);
+    setError(false);
+    get<Dashboard>("/dashboard")
+      .then((d) => live && setData(d))
+      .catch(() => live && setError(true))
+      .finally(() => live && setLoading(false));
+    return () => { live = false; };
+  }, []);
+
+  const money = (n: number, currency: string) =>
+    new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+
+  const time = (iso: string, tz: string) =>
+    new Intl.DateTimeFormat(locale, { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+  if (loading) return <DashboardSkeleton />;
+
+  if (error || !data) {
+    return (
+      <div className="grid min-h-[50vh] place-items-center text-center">
+        <div>
+          <p className="text-muted">{t("loadError")}</p>
+          <button
+            onClick={() => location.reload()}
+            className="mt-3 rounded-full border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent"
+          >
+            {t("retry")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const statuses = Object.entries(STATUS_META)
+    .map(([k, m]) => ({ ...m, count: data.totals.by_status[k] ?? 0 }))
+    .filter((s) => s.count > 0);
+  const statusTotal = statuses.reduce((s, x) => s + x.count, 0) || 1;
+  const maxStaff = Math.max(1, ...data.by_staff.map((s) => s.bookings));
+  const maxService = Math.max(1, ...data.by_service.map((s) => s.bookings));
+
+  return (
+    <div className="mx-auto max-w-5xl">
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">
+        {t("greeting", { name: user?.name ?? "" })}
+      </p>
+      <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-semibold text-ink">
+        {t("title")}
+      </h1>
+
+      {/* Signature hero — collected revenue in brass, day status stripe */}
+      <section className="mt-6 grid gap-4 md:grid-cols-[1.3fr_1fr]">
+        <div className="rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow)]">
+          <p className="text-sm text-muted">{t("revenueCollected")}</p>
+          <p className="mt-1 font-[family-name:var(--font-display)] text-5xl font-semibold text-gold tnum">
+            {money(data.revenue.collected, data.revenue.currency)}
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            {t("revenueExpected")}:{" "}
+            <span className="font-medium text-ink tnum">
+              {money(data.revenue.expected, data.revenue.currency)}
+            </span>
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow)]">
+          <div className="flex items-baseline justify-between">
+            <p className="text-sm text-muted">{t("bookings")}</p>
+            <p className="font-[family-name:var(--font-display)] text-3xl font-semibold text-ink tnum">
+              {data.totals.bookings}
+            </p>
+          </div>
+          {statuses.length > 0 ? (
+            <>
+              <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-surface-2">
+                {statuses.map((s) => (
+                  <span key={s.key} style={{ width: `${(s.count / statusTotal) * 100}%`, background: s.color }} />
+                ))}
+              </div>
+              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                {statuses.map((s) => (
+                  <li key={s.key} className="flex items-center gap-1.5 text-xs text-muted">
+                    <span className="size-2 rounded-full" style={{ background: s.color }} />
+                    {t(s.key)} <span className="font-medium text-ink tnum">{s.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-muted">{t("empty")}</p>
+          )}
+        </div>
+      </section>
+
+      {/* Breakdowns */}
+      <section className="mt-4 grid gap-4 md:grid-cols-2">
+        <RankCard title={t("byStaff")} unit={t("bookingsCol")}
+          rows={data.by_staff.map((s) => ({ label: s.staff, value: s.bookings }))} max={maxStaff} />
+        <RankCard title={t("byService")} unit={t("bookingsCol")}
+          rows={data.by_service.map((s) => ({ label: s.service, value: s.bookings }))} max={maxService} />
+      </section>
+
+      {/* Upcoming */}
+      <section className="mt-4 rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow)]">
+        <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
+          {t("nextUp")}
+        </h2>
+        {data.upcoming.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("emptyUpcoming")}</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line">
+            {data.upcoming.map((a) => (
+              <li key={a.id} className="flex items-center gap-4 py-3">
+                <span className="w-14 shrink-0 font-mono text-sm text-accent-ink tnum">
+                  {time(a.starts_at, data.range.timezone)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium text-ink">{a.customer?.name}</span>
+                  <span className="block truncate text-sm text-muted">
+                    {a.service?.name} · {t("with")} {a.staff?.name}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function RankCard({
+  title, unit, rows, max,
+}: { title: string; unit: string; rows: { label: string; value: number }[]; max: number }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow)]">
+      <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{title}</h2>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-sm text-muted">—</p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-3">
+          {rows.map((r, i) => (
+            <li key={i}>
+              <div className="mb-1 flex items-baseline justify-between gap-3">
+                <span className="truncate text-sm text-ink">{r.label}</span>
+                <span className="shrink-0 text-sm text-muted">
+                  <span className="font-medium text-ink tnum">{r.value}</span> {unit}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+                <span className="block h-full rounded-full bg-accent" style={{ width: `${(r.value / max) * 100}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="mx-auto max-w-5xl animate-pulse">
+      <div className="h-3 w-24 rounded bg-surface-2" />
+      <div className="mt-2 h-8 w-64 rounded bg-surface-2" />
+      <div className="mt-6 grid gap-4 md:grid-cols-[1.3fr_1fr]">
+        <div className="h-40 rounded-2xl bg-surface-2" />
+        <div className="h-40 rounded-2xl bg-surface-2" />
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="h-48 rounded-2xl bg-surface-2" />
+        <div className="h-48 rounded-2xl bg-surface-2" />
+      </div>
+    </div>
+  );
+}

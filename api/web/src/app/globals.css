@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
+/* ===== Salooni design tokens — botanical green + brass, warm paper ===== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --ground: #FAF8F3;
+  --surface: #FFFFFF;
+  --surface-2: #F3EFE7;
+  --ink: #1B211E;
+  --muted: #5E6B64;
+  --line: #E5E0D5;
+  --accent: #1E5C4A;
+  --accent-ink: #16493A;
+  --accent-soft: #E7F0EB;
+  --gold: #9A7736;
+  --gold-soft: #F3EAD6;
+  --ok: #2E7D5B;
+  --warn: #A9741A;
+  --crit: #B23A48;
+  --shadow: 0 1px 2px rgba(27,33,30,.05), 0 6px 20px rgba(27,33,30,.07);
+  --shadow-lg: 0 8px 40px rgba(27,33,30,.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --ground: #121614;
+    --surface: #1A201D;
+    --surface-2: #212824;
+    --ink: #ECEAE2;
+    --muted: #98A69D;
+    --line: #2B332E;
+    --accent: #6FBFA3;
+    --accent-ink: #8FD3B9;
+    --accent-soft: #1D2A25;
+    --gold: #C7A461;
+    --gold-soft: #2A2418;
+    --ok: #57B98C;
+    --warn: #D0A24A;
+    --crit: #E0798A;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.3);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,.45);
   }
 }
 
+:root[data-theme="light"] {
+  --ground: #FAF8F3; --surface: #FFFFFF; --surface-2: #F3EFE7; --ink: #1B211E;
+  --muted: #5E6B64; --line: #E5E0D5; --accent: #1E5C4A; --accent-ink: #16493A;
+  --accent-soft: #E7F0EB; --gold: #9A7736; --gold-soft: #F3EAD6; --ok: #2E7D5B;
+  --warn: #A9741A; --crit: #B23A48;
+  --shadow: 0 1px 2px rgba(27,33,30,.05), 0 6px 20px rgba(27,33,30,.07);
+  --shadow-lg: 0 8px 40px rgba(27,33,30,.12);
+}
+:root[data-theme="dark"] {
+  --ground: #121614; --surface: #1A201D; --surface-2: #212824; --ink: #ECEAE2;
+  --muted: #98A69D; --line: #2B332E; --accent: #6FBFA3; --accent-ink: #8FD3B9;
+  --accent-soft: #1D2A25; --gold: #C7A461; --gold-soft: #2A2418; --ok: #57B98C;
+  --warn: #D0A24A; --crit: #E0798A;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.3);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,.45);
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-crit: var(--crit);
+
+  --font-display: var(--font-display), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-body), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono-face), "SF Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { height: 100%; }
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeric data lines up in columns everywhere. */
+.tnum { font-variant-numeric: tabular-nums; }
+
+::selection { background: color-mix(in srgb, var(--gold) 30%, transparent); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

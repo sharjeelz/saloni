@@ -35,5 +35,49 @@
     "language": "Language",
     "arabic": "العربية",
     "english": "English"
+  },
+  "app": {
+    "brand": "Salooni",
+    "nav": {
+      "dashboard": "Dashboard",
+      "calendar": "Calendar",
+      "services": "Services",
+      "staff": "Team",
+      "branches": "Branches",
+      "billing": "Subscription",
+      "logout": "Sign out"
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your salon dashboard",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "signingIn": "Signing in…",
+      "error": "Wrong email or password.",
+      "tagline": "Run your salon. Fill every chair."
+    },
+    "dashboard": {
+      "title": "Today at a glance",
+      "greeting": "Hello, {name}",
+      "occupancy": "Chair occupancy",
+      "ofDay": "of today booked",
+      "revenueCollected": "Collected today",
+      "revenueExpected": "Expected today",
+      "bookings": "Bookings today",
+      "statusConfirmed": "Confirmed",
+      "statusDone": "Done",
+      "statusNoShow": "No-show",
+      "statusCancelled": "Cancelled",
+      "byStaff": "By team member",
+      "byService": "By service",
+      "nextUp": "Next appointments",
+      "bookingsCol": "bookings",
+      "empty": "No bookings yet today.",
+      "emptyUpcoming": "Nothing on the schedule.",
+      "loadError": "Couldn't load your dashboard.",
+      "retry": "Try again",
+      "with": "with"
+    }
   }
 }
