@@ -32,6 +32,33 @@ class BackendHardeningTest extends TestCase
         $this->assertTrue($otp->verify('phone', $phone, $code, 'booking', 10));
     }
 
+    public function test_login_otp_disambiguates_a_phone_used_at_two_salons(): void
+    {
+        $phone = '+966500001234';
+
+        $salonA = Salon::create(['name' => 'Alpha', 'slug' => 'alpha']);
+        Tenancy::set($salonA);
+        User::factory()->create(['salon_id' => $salonA->id, 'role' => 'staff', 'phone' => $phone]);
+        Tenancy::clear();
+
+        $salonB = Salon::create(['name' => 'Beta', 'slug' => 'beta']);
+        Tenancy::set($salonB);
+        $b = User::factory()->create(['salon_id' => $salonB->id, 'role' => 'staff', 'phone' => $phone]);
+        Tenancy::clear();
+
+        $code = $this->postJson('/api/auth/otp/request', ['phone' => $phone])->assertOk()->json('debug_code');
+
+        // No salon chosen → 409 with both accounts, code stays valid.
+        $this->postJson('/api/auth/otp/verify', ['phone' => $phone, 'code' => $code])
+            ->assertStatus(409)
+            ->assertJsonCount(2, 'accounts');
+
+        // Choosing a salon logs into that exact account.
+        $this->postJson('/api/auth/otp/verify', ['phone' => $phone, 'code' => $code, 'salon_id' => $salonB->id])
+            ->assertOk()
+            ->assertJsonPath('user.id', $b->id);
+    }
+
     public function test_saving_branch_hours_preserves_per_staff_hours(): void
     {
         $salon = Salon::create(['name' => 'Glow', 'slug' => 'glow']);

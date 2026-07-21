@@ -45,21 +45,47 @@ class OtpController extends Controller
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'code' => ['required', 'string', 'size:6'],
+            'salon_id' => ['nullable', 'integer'],
         ]);
 
-        if (! $this->otp->verify('phone', $data['phone'], $data['code'])) {
+        // Validate the code first (don't consume yet).
+        $otp = $this->otp->check('phone', $data['phone'], $data['code']);
+        if (! $otp) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
         }
 
-        $user = User::withoutGlobalScope('salon')
+        $candidates = User::withoutGlobalScope('salon')
             ->where('phone', $data['phone'])
             ->where('is_active', true)
-            ->first();
+            ->with('salon:id,name')
+            ->get();
 
-        if (! $user) {
+        if ($candidates->isEmpty()) {
+            $this->otp->consume($otp);
+
             return response()->json(['message' => 'No account found for this number.'], 404);
         }
 
+        // Same number at more than one salon: ask which, keeping the code valid.
+        if ($candidates->count() > 1 && empty($data['salon_id'])) {
+            return response()->json([
+                'message' => 'This number is registered at more than one salon. Choose one.',
+                'accounts' => $candidates->map(fn ($u) => [
+                    'salon_id' => $u->salon_id,
+                    'salon' => optional($u->salon)->name,
+                ])->values(),
+            ], 409);
+        }
+
+        $user = $candidates->count() > 1
+            ? $candidates->firstWhere('salon_id', (int) $data['salon_id'])
+            : $candidates->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'Invalid or expired code.'], 422);
+        }
+
+        $this->otp->consume($otp);
         $token = $user->createToken('api')->plainTextToken;
 
         return response()->json([

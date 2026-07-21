@@ -80,6 +80,23 @@ class OtpService
      */
     public function verify(string $channel, string $destination, string $code, string $purpose = 'login', ?int $salonId = null): bool
     {
+        $otp = $this->check($channel, $destination, $code, $purpose, $salonId);
+        if (! $otp) {
+            return false;
+        }
+
+        $this->consume($otp);
+
+        return true;
+    }
+
+    /**
+     * Validate a code (counts the attempt) but DON'T consume it — lets the
+     * caller do extra work (e.g. resolve which salon to log into) before
+     * finalizing. Returns the matching row, or null if invalid/expired.
+     */
+    public function check(string $channel, string $destination, string $code, string $purpose = 'login', ?int $salonId = null): ?OtpCode
+    {
         $otp = OtpCode::where('channel', $channel)
             ->where('destination', $destination)
             ->where('purpose', $purpose)
@@ -89,17 +106,16 @@ class OtpService
             ->first();
 
         if (! $otp || $otp->isExpired() || $otp->attempts >= self::MAX_ATTEMPTS) {
-            return false;
+            return null;
         }
 
         $otp->increment('attempts');
 
-        if (! Hash::check($code, $otp->code_hash)) {
-            return false;
-        }
+        return Hash::check($code, $otp->code_hash) ? $otp : null;
+    }
 
+    public function consume(OtpCode $otp): void
+    {
         $otp->update(['consumed_at' => now()]);
-
-        return true;
     }
 }
