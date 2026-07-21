@@ -82,7 +82,14 @@
     "pickNewTime": "اختر وقتاً جديداً",
     "keep": "إبقاء",
     "cannotChange": "لا يمكن تغيير هذا الحجز.",
-    "manageExisting": "إدارة حجزك الحالي"
+    "manageExisting": "إدارة حجزك الحالي",
+    "manageLink": "إدارة حجز",
+    "lookupTitle": "ابحث عن حجزك",
+    "lookupSub": "أدخل رقمك وسنرسل لك رمزاً.",
+    "yourBookings": "حجوزاتك القادمة",
+    "noBookings": "لا حجوزات قادمة لهذا الرقم.",
+    "manageThis": "إدارة",
+    "backToBook": "حجز موعد جديد"
   },
   "app": {
     "brand": "صالوني",

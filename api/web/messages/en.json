@@ -82,7 +82,14 @@
     "pickNewTime": "Pick a new time",
     "keep": "Keep it",
     "cannotChange": "This booking can no longer be changed.",
-    "manageExisting": "Manage your existing booking"
+    "manageExisting": "Manage your existing booking",
+    "manageLink": "Manage a booking",
+    "lookupTitle": "Find your booking",
+    "lookupSub": "Enter your number and we'll text you a code.",
+    "yourBookings": "Your upcoming bookings",
+    "noBookings": "No upcoming bookings for this number.",
+    "manageThis": "Manage",
+    "backToBook": "Book a new appointment"
   },
   "app": {
     "brand": "Salooni",

@@ -48,6 +48,7 @@ Route::prefix('book/{salon:slug}')->group(function () {
     Route::get('/availability', [PublicBookingController::class, 'availability']);
     Route::post('/otp', [PublicBookingController::class, 'requestOtp']);
     Route::post('/appointments', [PublicBookingController::class, 'confirm']);
+    Route::post('/lookup', [PublicBookingController::class, 'lookup']);
 });
 
 /*

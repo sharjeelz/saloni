@@ -104,6 +104,25 @@ class BookingFlowTest extends TestCase
         $book('13:00')->assertCreated();
     }
 
+    public function test_customer_can_look_up_their_bookings_by_phone_otp(): void
+    {
+        $phone = '+966500000123';
+        $token = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.manage_token');
+
+        // Wrong code → no leak.
+        $this->postJson('/api/book/glow/lookup', ['phone' => $phone, 'code' => '000000'])->assertStatus(422);
+
+        // Correct OTP → returns the upcoming booking with its manage token.
+        $this->postJson('/api/book/glow/lookup', ['phone' => $phone, 'code' => $this->otpFor($phone)])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.manage_token', $token);
+    }
+
     public function test_booking_requires_a_valid_otp(): void
     {
         $this->postJson('/api/book/glow/appointments', [

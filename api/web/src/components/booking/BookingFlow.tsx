@@ -28,6 +28,7 @@ export default function BookingFlow({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const [mode, setMode] = useState<"book" | "lookup">("book");
   const [step, setStep] = useState(0);
   const [branchId, setBranchId] = useState<number | null>(null);
   const [service, setService] = useState<Service | null>(null);
@@ -154,9 +155,19 @@ export default function BookingFlow({ slug }: { slug: string }) {
     <div style={themeStyle} className="min-h-dvh bg-ground">
       <header className="mx-auto flex max-w-lg items-center justify-between px-5 py-4">
         <span className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">{salon.name}</span>
-        <LocaleSwitcher />
+        <div className="flex items-center gap-3">
+          {mode === "book" && step === 0 && (
+            <button onClick={() => setMode("lookup")} className="text-sm font-medium text-accent-ink hover:underline">
+              {t("manageLink")}
+            </button>
+          )}
+          <LocaleSwitcher />
+        </div>
       </header>
 
+      {mode === "lookup" ? (
+        <LookupPanel slug={slug} onBack={() => setMode("book")} />
+      ) : (
       <main className="mx-auto max-w-lg px-5 pb-16">
         {step < 4 && (
           <div className="mb-6">
@@ -347,7 +358,98 @@ export default function BookingFlow({ slug }: { slug: string }) {
 
         <p className="mt-10 text-center font-mono text-[11px] uppercase tracking-widest text-muted/70">{t("poweredBy")}</p>
       </main>
+      )}
     </div>
+  );
+}
+
+function LookupPanel({ slug, onBack }: { slug: string; onBack: () => void }) {
+  const t = useTranslations("book");
+  const locale = useLocale();
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [sent, setSent] = useState(false);
+  const [debugCode, setDebugCode] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<{ reference: string; manage_token: string; starts_at: string; service: string; staff: string }[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const whenLabel = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+  async function send() {
+    setError(null); setBusy(true);
+    try {
+      const r = await post<{ debug_code?: string }>(`/book/${slug}/otp`, { phone });
+      setDebugCode(r.debug_code ?? null);
+      setSent(true);
+    } catch (e) { setError(e instanceof ApiError ? e.message : "Error"); }
+    finally { setBusy(false); }
+  }
+  async function find() {
+    setError(null); setBusy(true);
+    try {
+      const r = await post<{ data: typeof bookings }>(`/book/${slug}/lookup`, { phone, code });
+      setBookings(r.data ?? []);
+    } catch (e) { setError(e instanceof ApiError && e.status === 422 ? t("wrongCode") : (e instanceof ApiError ? e.message : "Error")); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <main className="mx-auto max-w-lg px-5 pb-16">
+      <h1 className="mb-1 font-[family-name:var(--font-display)] text-2xl font-semibold text-ink">{t("lookupTitle")}</h1>
+      <p className="mb-5 text-sm text-muted">{t("lookupSub")}</p>
+
+      {bookings === null ? (
+        <div className="flex flex-col gap-4">
+          <Field label={t("phone")}>
+            <Input type="tel" dir="ltr" placeholder="+9665…" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={sent} />
+          </Field>
+          {sent && (
+            <>
+              {debugCode && <p className="rounded-lg bg-gold-soft px-3 py-2 text-center text-sm text-gold" dir="ltr">Test mode — code <b className="tnum">{debugCode}</b></p>}
+              <Field label={t("code")}>
+                <Input inputMode="numeric" dir="ltr" maxLength={6} className="tracking-[0.4em]" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+              </Field>
+            </>
+          )}
+          {error && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onBack}>{t("back")}</Button>
+            {sent ? (
+              <Button className="flex-1" disabled={busy || code.length !== 6} onClick={find}>{busy ? t("confirming") : t("next")}</Button>
+            ) : (
+              <Button className="flex-1" disabled={busy || phone.trim().length < 9} onClick={send}>{busy ? t("sending") : t("sendCode")}</Button>
+            )}
+          </div>
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
+          <p className="text-muted">{t("noBookings")}</p>
+          <button onClick={onBack} className="mt-3 text-sm font-medium text-accent-ink hover:underline">{t("backToBook")}</button>
+        </div>
+      ) : (
+        <div>
+          <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{t("yourBookings")}</h2>
+          <div className="grid gap-2.5">
+            {bookings.map((bk) => (
+              <Link
+                key={bk.manage_token}
+                href={`/book/manage/${bk.manage_token}`}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow)] transition-colors hover:border-accent"
+              >
+                <span className="min-w-0">
+                  <span className="block font-medium text-ink">{bk.service}</span>
+                  <span className="block text-sm text-muted">{t("with")} {bk.staff} · {whenLabel(bk.starts_at)}</span>
+                </span>
+                <span className="shrink-0 text-sm font-medium text-accent-ink">{t("manageThis")} →</span>
+              </Link>
+            ))}
+          </div>
+          <button onClick={onBack} className="mt-6 text-sm font-medium text-accent-ink hover:underline">{t("backToBook")}</button>
+        </div>
+      )}
+    </main>
   );
 }
 

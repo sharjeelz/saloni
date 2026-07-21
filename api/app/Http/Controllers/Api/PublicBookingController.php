@@ -6,6 +6,7 @@ use App\Exceptions\SlotUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Branch;
+use App\Models\Customer;
 use App\Models\Salon;
 use App\Models\Service;
 use App\Models\User;
@@ -143,6 +144,44 @@ class PublicBookingController extends Controller
             'message' => 'Verification code sent.',
             'debug_code' => $result['debug_code'] ?? null, // null in production
         ], fn ($v) => $v !== null));
+    }
+
+    /**
+     * Look up a customer's upcoming bookings by phone (after OTP) — so they can
+     * manage a booking from the main page without the original link.
+     */
+    public function lookup(Request $request, Salon $salon): JsonResponse
+    {
+        $this->pin($salon);
+
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
+            'code' => ['required', 'string', 'size:6'],
+        ]);
+
+        if (! $this->otp->verify('phone', $data['phone'], $data['code'], 'booking', Tenancy::id())) {
+            return response()->json(['message' => 'Invalid or expired code.'], 422);
+        }
+
+        $customer = Customer::where('phone', $data['phone'])->first();
+        $bookings = $customer
+            ? Appointment::where('customer_id', $customer->id)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->where('starts_at', '>', now())
+                ->with(['service:id,name', 'staff:id,name'])
+                ->orderBy('starts_at')
+                ->get()
+                ->map(fn (Appointment $a) => [
+                    'reference' => $a->reference,
+                    'manage_token' => $a->public_token,
+                    'starts_at' => $a->starts_at,
+                    'status' => $a->status,
+                    'service' => $a->service?->name,
+                    'staff' => $a->staff?->name,
+                ])
+            : collect();
+
+        return response()->json(['data' => $bookings->values()]);
     }
 
     /**
