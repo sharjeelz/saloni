@@ -233,6 +233,9 @@
     "calendar": {
       "title": "المواعيد",
       "walkIn": "حجز مباشر",
+      "searchRef": "ابحث بالمرجع…",
+      "searchNotFound": "لا حجز بهذا المرجع.",
+      "searchResult": "نتيجة البحث",
       "today": "اليوم",
       "prev": "اليوم السابق",
       "next": "اليوم التالي",

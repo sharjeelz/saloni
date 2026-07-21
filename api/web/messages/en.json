@@ -233,6 +233,9 @@
     "calendar": {
       "title": "Calendar",
       "walkIn": "Walk-in",
+      "searchRef": "Find by reference…",
+      "searchNotFound": "No booking found with that reference.",
+      "searchResult": "Search result",
       "today": "Today",
       "prev": "Previous day",
       "next": "Next day",

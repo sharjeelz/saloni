@@ -31,25 +31,30 @@ class AppointmentController extends Controller
             'branch_id' => ['nullable', 'integer'],
             'staff_id' => ['nullable', 'integer'],
             'status' => ['nullable', Rule::in(Appointment::STATUSES)],
+            'reference' => ['nullable', 'string', 'max:12'],
         ]);
 
-        // Interpret the day range in the salon's timezone → UTC bounds, so the
-        // calendar's "day" matches local wall-clock (not the browser's/UTC).
-        $tz = Salon::find(Tenancy::id())?->timezone ?? 'Asia/Riyadh';
-        $from = ($data['from'] ?? null) ? Carbon::parse($data['from'], $tz)->startOfDay()->utc() : null;
-        $to = ($data['to'] ?? null) ? Carbon::parse($data['to'], $tz)->endOfDay()->utc() : null;
+        $query = Appointment::with(['customer:id,name,phone', 'service:id,name,duration_min', 'staff:id,name'])
+            ->when($user->isStaff(), fn ($q) => $q->where('staff_id', $user->id));
 
-        $appointments = Appointment::with(['customer:id,name,phone', 'service:id,name,duration_min', 'staff:id,name'])
-            ->when($user->isStaff(), fn ($q) => $q->where('staff_id', $user->id))
-            ->when($from, fn ($q) => $q->where('starts_at', '>=', $from))
-            ->when($to, fn ($q) => $q->where('starts_at', '<=', $to))
-            ->when($data['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
-            ->when($data['staff_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id))
-            ->when($data['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
-            ->orderBy('starts_at')
-            ->get();
+        if (! empty($data['reference'])) {
+            // Look up a specific booking by its short reference — across all dates.
+            $query->where('reference', strtoupper(trim($data['reference'])));
+        } else {
+            // Day/range view, interpreted in the salon timezone → UTC bounds.
+            $tz = Salon::find(Tenancy::id())?->timezone ?? 'Asia/Riyadh';
+            $from = ($data['from'] ?? null) ? Carbon::parse($data['from'], $tz)->startOfDay()->utc() : null;
+            $to = ($data['to'] ?? null) ? Carbon::parse($data['to'], $tz)->endOfDay()->utc() : null;
 
-        return response()->json(['data' => $appointments]);
+            $query
+                ->when($from, fn ($q) => $q->where('starts_at', '>=', $from))
+                ->when($to, fn ($q) => $q->where('starts_at', '<=', $to))
+                ->when($data['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
+                ->when($data['staff_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id))
+                ->when($data['status'] ?? null, fn ($q, $s) => $q->where('status', $s));
+        }
+
+        return response()->json(['data' => $query->orderBy('starts_at')->get()]);
     }
 
     public function show(Request $request, Appointment $appointment): JsonResponse

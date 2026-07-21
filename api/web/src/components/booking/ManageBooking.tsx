@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ApiError, get, post } from "@/lib/api";
+import { Link } from "@/i18n/navigation";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { Badge, Button, Spinner } from "@/components/ui/kit";
 
@@ -13,7 +14,7 @@ type Booking = {
   service: { name: string; duration_min: number } | null;
   staff: { name: string } | null;
   branch: { name: string; address: string | null } | null;
-  salon: { name: string; brand_color: string | null; timezone: string } | null;
+  salon: { name: string; slug: string; brand_color: string | null; timezone: string } | null;
 };
 type Slot = { time: string };
 
@@ -118,6 +119,14 @@ export default function ManageBooking({ token }: { token: string }) {
           <div className="pt-8 text-center">
             <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-ink">{t("cancelled")}</h1>
             <p className="mt-2 text-muted">{t("cancelledSub")}</p>
+            {b.salon?.slug && (
+              <Link
+                href={`/book/${b.salon.slug}`}
+                className="mt-6 inline-block rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-on-accent"
+              >
+                {t("backToBook")}
+              </Link>
+            )}
           </div>
         ) : (
           <>

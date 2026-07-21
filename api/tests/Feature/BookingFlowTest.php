@@ -208,6 +208,25 @@ class BookingFlowTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'done');
     }
 
+    public function test_owner_can_find_a_booking_by_reference(): void
+    {
+        Sanctum::actingAs($this->owner);
+        $phone = '+966500000123';
+        $ref = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.reference');
+
+        // Reference search spans all dates (no from/to needed) and is case-insensitive.
+        $this->getJson('/api/appointments?reference=' . strtolower($ref))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.customer.name', 'Sara');
+
+        $this->getJson('/api/appointments?reference=ZZZZZZ')->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_calendar_lists_appointments_in_range(): void
     {
         Sanctum::actingAs($this->owner);

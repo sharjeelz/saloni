@@ -272,7 +272,7 @@ class PublicBookingController extends Controller
                 'service:id,name,duration_min',
                 'staff:id,name',
                 'branch:id,name,address',
-                'salon:id,name,brand_color,timezone',
+                'salon:id,name,slug,brand_color,timezone',
             ),
         ]);
     }

@@ -36,6 +36,10 @@ export default function CalendarPage() {
   const { notify } = useToast();
   const [date, setDate] = useState(() => isoDate(new Date()));
   const [walkIn, setWalkIn] = useState(false);
+  const [refSearch, setRefSearch] = useState("");
+  const [searchResult, setSearchResult] = useState<Appt[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searching = refSearch.trim().length >= 2;
 
   const statusLabel = (s: string): string =>
     ({
@@ -61,63 +65,103 @@ export default function CalendarPage() {
     [date, locale],
   );
 
-  async function setStatus(a: Appt, status: string) {
-    try { await patch(`/appointments/${a.id}/status`, { status }); reload(); notify(c("saved")); }
+  const time = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
+  const dayTime = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
+
+  // Search bookings by reference (across all dates).
+  const refReload = () => {
+    const ref = refSearch.trim();
+    if (ref.length < 2) { setSearchResult(null); return; }
+    setSearchLoading(true);
+    get<{ data: Appt[] }>(`/appointments?reference=${encodeURIComponent(ref)}`)
+      .then((r) => setSearchResult(r.data))
+      .catch(() => setSearchResult([]))
+      .finally(() => setSearchLoading(false));
+  };
+  useEffect(() => {
+    const id = setTimeout(refReload, 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refSearch]);
+
+  async function setStatusAny(a: Appt, status: string) {
+    try { await patch(`/appointments/${a.id}/status`, { status }); reload(); refReload(); notify(c("saved")); }
     catch { notify(c("error"), "error"); }
   }
 
-  const time = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
+  const apptRow = (a: Appt, withDate = false) => (
+    <Card key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+      <span className="shrink-0 whitespace-nowrap font-mono text-sm text-accent-ink tnum" dir="ltr">
+        {withDate ? dayTime(a.starts_at) : time(a.starts_at)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-ink">{a.customer?.name}</p>
+        <p className="text-sm text-muted">{a.service?.name} · {t("with")} {a.staff?.name}</p>
+      </div>
+      <Badge tone={STATUS_TONE[a.status]}>{statusLabel(a.status)}</Badge>
+      {a.status === "pending" && (
+        <div className="flex gap-1.5">
+          <Button onClick={() => setStatusAny(a, "confirmed")}>{t("confirm")}</Button>
+          <Button variant="danger" onClick={() => setStatusAny(a, "cancelled")}>{t("markCancelled")}</Button>
+        </div>
+      )}
+      {a.status === "confirmed" && (
+        <div className="flex gap-1.5">
+          <Button onClick={() => setStatusAny(a, "done")}>{t("markDone")}</Button>
+          <Button variant="ghost" onClick={() => setStatusAny(a, "no_show")}>{t("markNoShow")}</Button>
+          <Button variant="danger" onClick={() => setStatusAny(a, "cancelled")}>{t("markCancelled")}</Button>
+        </div>
+      )}
+    </Card>
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("title")}>
+        <input
+          value={refSearch}
+          onChange={(e) => setRefSearch(e.target.value.toUpperCase())}
+          placeholder={t("searchRef")}
+          dir="ltr"
+          className="w-40 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted/60 focus:border-accent"
+        />
         <Button onClick={() => setWalkIn(true)}>+ {t("walkIn")}</Button>
       </PageHeader>
 
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => shift(-1)} aria-label={t("prev")}
-            className="grid size-9 place-items-center rounded-full border border-line text-muted hover:text-ink">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path className="rtl:hidden" d="M15 18l-6-6 6-6" /><path className="hidden rtl:block" d="M9 18l6-6-6-6" /></svg>
-          </button>
-          <Button variant="ghost" onClick={() => setDate(isoDate(new Date()))}>{t("today")}</Button>
-          <button onClick={() => shift(1)} aria-label={t("next")}
-            className="grid size-9 place-items-center rounded-full border border-line text-muted hover:text-ink">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path className="rtl:hidden" d="M9 18l6-6-6-6" /><path className="hidden rtl:block" d="M15 18l-6-6 6-6" /></svg>
-          </button>
+      {searching ? (
+        <div>
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-muted">{t("searchResult")}</p>
+          {searchLoading ? <Spinner /> : !searchResult || searchResult.length === 0 ? (
+            <p className="rounded-xl bg-surface-2 px-4 py-8 text-center text-sm text-muted">{t("searchNotFound")}</p>
+          ) : (
+            <div className="grid gap-2.5">{searchResult.map((a) => apptRow(a, true))}</div>
+          )}
         </div>
-        <p className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{heading}</p>
-      </div>
-
-      {loading ? <Spinner /> : error || !data ? <LoadError onRetry={reload} /> : data.data.length === 0 ? (
-        <EmptyState message={t("empty")} action={<Button onClick={() => setWalkIn(true)}>+ {t("walkIn")}</Button>} />
       ) : (
-        <div className="grid gap-2.5">
-          {data.data.map((a) => (
-            <Card key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
-              <span className="shrink-0 whitespace-nowrap font-mono text-sm text-accent-ink tnum" dir="ltr">{time(a.starts_at)}</span>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-ink">{a.customer?.name}</p>
-                <p className="text-sm text-muted">{a.service?.name} · {t("with")} {a.staff?.name}</p>
-              </div>
-              <Badge tone={STATUS_TONE[a.status]}>{statusLabel(a.status)}</Badge>
-              {a.status === "pending" && (
-                <div className="flex gap-1.5">
-                  <Button onClick={() => setStatus(a, "confirmed")}>{t("confirm")}</Button>
-                  <Button variant="danger" onClick={() => setStatus(a, "cancelled")}>{t("markCancelled")}</Button>
-                </div>
-              )}
-              {a.status === "confirmed" && (
-                <div className="flex gap-1.5">
-                  <Button onClick={() => setStatus(a, "done")}>{t("markDone")}</Button>
-                  <Button variant="ghost" onClick={() => setStatus(a, "no_show")}>{t("markNoShow")}</Button>
-                  <Button variant="danger" onClick={() => setStatus(a, "cancelled")}>{t("markCancelled")}</Button>
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
+        <>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => shift(-1)} aria-label={t("prev")}
+                className="grid size-9 place-items-center rounded-full border border-line text-muted hover:text-ink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path className="rtl:hidden" d="M15 18l-6-6 6-6" /><path className="hidden rtl:block" d="M9 18l6-6-6-6" /></svg>
+              </button>
+              <Button variant="ghost" onClick={() => setDate(isoDate(new Date()))}>{t("today")}</Button>
+              <button onClick={() => shift(1)} aria-label={t("next")}
+                className="grid size-9 place-items-center rounded-full border border-line text-muted hover:text-ink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path className="rtl:hidden" d="M9 18l6-6-6-6" /><path className="hidden rtl:block" d="M15 18l-6-6 6-6" /></svg>
+              </button>
+            </div>
+            <p className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{heading}</p>
+          </div>
+
+          {loading ? <Spinner /> : error || !data ? <LoadError onRetry={reload} /> : data.data.length === 0 ? (
+            <EmptyState message={t("empty")} action={<Button onClick={() => setWalkIn(true)}>+ {t("walkIn")}</Button>} />
+          ) : (
+            <div className="grid gap-2.5">{data.data.map((a) => apptRow(a))}</div>
+          )}
+        </>
       )}
 
       {walkIn && salon && (
