@@ -52,6 +52,27 @@ class CustomerDirectoryTest extends TestCase
             ->assertJsonPath('data.0.phone', '+966500001111');
     }
 
+    public function test_owner_can_edit_a_customer_but_not_another_salons(): void
+    {
+        [$salonA, $ownerA] = $this->salon('glow');
+        Tenancy::set($salonA);
+        $mine = Customer::create(['salon_id' => $salonA->id, 'name' => 'Sara', 'phone' => '+966500004444']);
+        Tenancy::clear();
+
+        [$salonB] = $this->salon('lush');
+        Tenancy::set($salonB);
+        $foreign = Customer::create(['salon_id' => $salonB->id, 'name' => 'Other', 'phone' => '+966500005555']);
+        Tenancy::clear();
+
+        Sanctum::actingAs($ownerA);
+        $this->patchJson("/api/customers/{$mine->id}", ['name' => 'Sara Q.', 'notes' => 'Prefers mornings'])
+            ->assertOk()->assertJsonPath('data.name', 'Sara Q.');
+        $this->assertDatabaseHas('customers', ['id' => $mine->id, 'name' => 'Sara Q.', 'notes' => 'Prefers mornings']);
+
+        // Cannot touch salon B's customer.
+        $this->patchJson("/api/customers/{$foreign->id}", ['name' => 'Hacked'])->assertNotFound();
+    }
+
     public function test_search_and_tenant_isolation(): void
     {
         [$salonA, $ownerA] = $this->salon('glow');
