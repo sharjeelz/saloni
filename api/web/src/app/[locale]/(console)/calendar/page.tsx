@@ -205,7 +205,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
   }
 
   if (branches.loading || services.loading || staff.loading) {
-    return <Modal open onClose={onClose} title={t("newWalkIn")}><Spinner /></Modal>;
+    return <Modal open onClose={onClose} title={t("newWalkIn")}><Spinner inline /></Modal>;
   }
 
   return (
@@ -274,7 +274,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
           {!ready ? (
             <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-muted">{t("pickFirst")}</p>
           ) : slotsLoading ? (
-            <div className="py-4"><Spinner /></div>
+            <Spinner inline />
           ) : !slots || slots.length === 0 ? (
             <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-muted">{t("noSlots")}</p>
           ) : (

@@ -127,7 +127,7 @@ export default function BillingPage() {
       <h2 className="mb-3 mt-8 font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{t("invoices")}</h2>
       <Card className="p-2">
         {invoices.loading ? (
-          <div className="p-4"><Spinner /></div>
+          <Spinner inline />
         ) : !invoices.data || invoices.data.data.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted">{t("noInvoices")}</p>
         ) : (

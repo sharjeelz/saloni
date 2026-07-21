@@ -168,7 +168,7 @@ function CustomerDrawer({ customer, onClose, onSaved }: {
 
         <div>
           <h3 className="mb-2 font-[family-name:var(--font-display)] text-base font-semibold text-ink">{t("history")}</h3>
-          {!data ? <Spinner /> : data.history.length === 0 ? (
+          {!data ? <Spinner inline /> : data.history.length === 0 ? (
             <p className="text-sm text-muted">{t("noHistory")}</p>
           ) : (
             <ul className="divide-y divide-line">

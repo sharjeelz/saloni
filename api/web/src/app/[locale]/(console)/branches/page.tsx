@@ -152,7 +152,7 @@ function HoursModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
 
   return (
     <Modal open onClose={onClose} title={`${t("hours")} · ${branch.name}`}>
-      {error ? <LoadError onRetry={reload} /> : loading || !rows ? <Spinner /> : (
+      {error ? <LoadError onRetry={reload} /> : loading || !rows ? <Spinner inline /> : (
         <div className="flex flex-col gap-2">
           {WEEKDAYS.map((label, d) => {
             const row = rows[d] ?? { open: false, start: "10:00", end: "22:00" };
@@ -216,7 +216,7 @@ function StaffModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
       {failed ? (
         <LoadError onRetry={() => { allStaff.reload(); detail.reload(); }} />
       ) : !ready ? (
-        <Spinner />
+        <Spinner inline />
       ) : staffList.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted">{t("noStaff")}</p>
       ) : (

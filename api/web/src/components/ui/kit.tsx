@@ -84,10 +84,10 @@ export function Badge({ tone = "muted", children }: { tone?: string; children: R
 }
 
 /* ---------- Spinner ---------- */
-export function Spinner() {
+export function Spinner({ inline = false }: { inline?: boolean }) {
   return (
-    <div className="grid min-h-[40vh] place-items-center">
-      <div className="size-7 animate-spin rounded-full border-2 border-line border-t-accent" />
+    <div className={`grid place-items-center ${inline ? "py-6" : "min-h-[40vh]"}`}>
+      <div className="size-6 animate-spin rounded-full border-2 border-line border-t-accent" />
     </div>
   );
 }

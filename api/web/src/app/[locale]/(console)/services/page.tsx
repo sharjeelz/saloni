@@ -273,7 +273,7 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
       {failed ? (
         <LoadError onRetry={() => { allStaff.reload(); detail.reload(); }} />
       ) : !ready ? (
-        <Spinner />
+        <Spinner inline />
       ) : staffList.length === 0 ? (
         <div className="py-4 text-center">
           <p className="text-muted">{t("noStaffYet")}</p>
