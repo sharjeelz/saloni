@@ -20,6 +20,11 @@ class SetTenant
 
         if ($user && $user->salon_id) {
             Tenancy::set($user->salon_id);
+
+            // A super-admin can suspend a tenant; block its members' access.
+            if ($user->salon && ! $user->salon->is_active) {
+                abort(403, 'This salon is suspended.');
+            }
         }
 
         return $next($request);

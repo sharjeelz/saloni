@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\WorkingHour;
+use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class WorkingHourController extends Controller
 {
@@ -29,7 +31,11 @@ class WorkingHourController extends Controller
             'hours.*.weekday' => ['required', 'integer', 'between:0,6'],
             'hours.*.start_time' => ['required', 'date_format:H:i'],
             'hours.*.end_time' => ['required', 'date_format:H:i', 'after:hours.*.start_time'],
-            'hours.*.user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'hours.*.user_id' => [
+                'nullable', 'integer',
+                Rule::exists('users', 'id')->where(fn ($q) =>
+                    $q->where('salon_id', Tenancy::id())->where('role', 'staff')),
+            ],
         ]);
 
         DB::transaction(function () use ($branch, $data) {
