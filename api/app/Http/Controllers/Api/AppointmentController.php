@@ -6,10 +6,12 @@ use App\Exceptions\SlotUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Branch;
+use App\Models\Salon;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Booking\BookingService;
 use App\Support\Tenancy;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,17 +26,23 @@ class AppointmentController extends Controller
         $user = $request->user();
 
         $data = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d'],
             'branch_id' => ['nullable', 'integer'],
             'staff_id' => ['nullable', 'integer'],
             'status' => ['nullable', Rule::in(Appointment::STATUSES)],
         ]);
 
+        // Interpret the day range in the salon's timezone → UTC bounds, so the
+        // calendar's "day" matches local wall-clock (not the browser's/UTC).
+        $tz = Salon::find(Tenancy::id())?->timezone ?? 'Asia/Riyadh';
+        $from = ($data['from'] ?? null) ? Carbon::parse($data['from'], $tz)->startOfDay()->utc() : null;
+        $to = ($data['to'] ?? null) ? Carbon::parse($data['to'], $tz)->endOfDay()->utc() : null;
+
         $appointments = Appointment::with(['customer:id,name,phone', 'service:id,name,duration_min', 'staff:id,name'])
             ->when($user->isStaff(), fn ($q) => $q->where('staff_id', $user->id))
-            ->when($data['from'] ?? null, fn ($q, $d) => $q->where('starts_at', '>=', $d))
-            ->when($data['to'] ?? null, fn ($q, $d) => $q->where('starts_at', '<=', $d))
+            ->when($from, fn ($q) => $q->where('starts_at', '>=', $from))
+            ->when($to, fn ($q) => $q->where('starts_at', '<=', $to))
             ->when($data['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
             ->when($data['staff_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id))
             ->when($data['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
@@ -63,8 +71,8 @@ class AppointmentController extends Controller
             'service_id' => ['required', Rule::exists('services', 'id')->where('salon_id', $salonId)],
             'staff_id' => ['required', Rule::exists('users', 'id')->where(fn ($q) =>
                 $q->where('salon_id', $salonId)->where('role', 'staff'))],
-            'customer_name' => ['required', 'string', 'max:255'],
-            'customer_phone' => ['required', 'string', 'max:20'],
+            'customer_name' => ['required', 'string', 'min:2', 'max:255'],
+            'customer_phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'date' => ['required', 'date_format:Y-m-d'],
             'time' => ['required', 'date_format:H:i'],
         ]);

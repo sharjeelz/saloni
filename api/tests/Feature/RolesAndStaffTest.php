@@ -55,6 +55,30 @@ class RolesAndStaffTest extends TestCase
         ])->assertForbidden(); // 403 via role:owner
     }
 
+    public function test_invite_rejects_a_non_numeric_phone(): void
+    {
+        [, $owner] = $this->makeSalonWithOwner();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/staff/invite', ['name' => 'Lina', 'phone' => 'abc'])
+            ->assertStatus(422);
+    }
+
+    public function test_owner_can_edit_and_reactivate_staff(): void
+    {
+        [, $owner, $staff] = $this->makeSalonWithOwner();
+        Sanctum::actingAs($owner);
+
+        $this->patchJson("/api/staff/{$staff->id}", ['title' => 'Lead Stylist'])
+            ->assertOk()->assertJsonPath('staff.title', 'Lead Stylist');
+
+        $this->patchJson("/api/staff/{$staff->id}/deactivate")->assertOk();
+        $this->assertDatabaseHas('users', ['id' => $staff->id, 'is_active' => false]);
+
+        $this->patchJson("/api/staff/{$staff->id}/activate")->assertOk();
+        $this->assertDatabaseHas('users', ['id' => $staff->id, 'is_active' => true]);
+    }
+
     public function test_owner_cannot_reach_super_admin_endpoints(): void
     {
         [, $owner] = $this->makeSalonWithOwner();

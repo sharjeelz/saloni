@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OtpController;
 use App\Http\Controllers\Api\PublicBookingController;
@@ -71,6 +72,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/time-off', [TimeOffController::class, 'store']);
     Route::delete('/time-off/{timeOff}', [TimeOffController::class, 'destroy']);
 
+    // Customers — directory, search, history (owner + staff).
+    Route::get('/customers', [CustomerController::class, 'index']);
+    Route::get('/customers/{customer}', [CustomerController::class, 'show']);
+    Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+
     // Appointments — calendar, walk-ins, status (owner sees all; staff see own).
     Route::get('/appointments', [AppointmentController::class, 'index']);
     Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
@@ -93,7 +99,9 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         // Staff
         Route::get('/staff', [StaffController::class, 'index']);
         Route::post('/staff/invite', [StaffController::class, 'invite']);
+        Route::patch('/staff/{staff}', [StaffController::class, 'update']);
         Route::patch('/staff/{staff}/deactivate', [StaffController::class, 'deactivate']);
+        Route::patch('/staff/{staff}/activate', [StaffController::class, 'activate']);
 
         // Branches & hours
         Route::post('/branches', [BranchController::class, 'store']);

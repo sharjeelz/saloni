@@ -1,0 +1,105 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ApiError, patch } from "@/lib/api";
+import { useApi } from "@/lib/useApi";
+import { useToast } from "@/components/ui/Toast";
+import { Button, Card, Field, Input, LoadError, PageHeader, Select, Spinner } from "@/components/ui/kit";
+
+type Salon = {
+  name: string; phone: string | null; vat_number: string | null;
+  brand_color: string | null; timezone: string; locale: string; logo_path: string | null;
+};
+
+const TIMEZONES = ["Asia/Riyadh", "Asia/Dubai", "Asia/Kuwait", "Asia/Bahrain", "Asia/Qatar"];
+
+export default function SettingsPage() {
+  const t = useTranslations("app.settings");
+  const c = useTranslations("app.common");
+  const { notify } = useToast();
+  const { data, loading, error, reload } = useApi<{ data: Salon }>("/salon");
+  const [form, setForm] = useState<Salon | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => { if (data) setForm(data.data); }, [data]);
+
+  if (loading || !form) {
+    return error ? <LoadError onRetry={reload} /> : <Spinner />;
+  }
+
+  const set = (k: keyof Salon) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => (f ? { ...f, [k]: e.target.value } : f));
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await patch("/salon", {
+        name: form.name,
+        phone: form.phone || null,
+        vat_number: form.vat_number || null,
+        brand_color: form.brand_color || null,
+        timezone: form.timezone,
+        locale: form.locale,
+      });
+      notify(t("saved"));
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : c("error"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <PageHeader title={t("title")} />
+      <Card className="p-6">
+        <form onSubmit={save} className="flex flex-col gap-4">
+          <Field label={t("name")}><Input required minLength={2} value={form.name} onChange={set("name")} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("phone")}>
+              <Input type="tel" dir="ltr" placeholder="+9665…" value={form.phone ?? ""} onChange={set("phone")} />
+            </Field>
+            <Field label={t("vatNumber")}>
+              <Input dir="ltr" value={form.vat_number ?? ""} onChange={set("vat_number")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("timezone")}>
+              <Select value={form.timezone} onChange={set("timezone")}>
+                {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+              </Select>
+            </Field>
+            <Field label={t("locale")}>
+              <Select value={form.locale} onChange={set("locale")}>
+                <option value="ar">{t("arabic")}</option>
+                <option value="en">{t("english")}</option>
+              </Select>
+            </Field>
+          </div>
+          <Field label={t("brandColor")}>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={form.brand_color ?? "#1E5C4A"}
+                onChange={set("brand_color")}
+                className="size-11 shrink-0 cursor-pointer rounded-lg border border-line bg-surface p-1"
+              />
+              <Input dir="ltr" value={form.brand_color ?? ""} placeholder="#1E5C4A" onChange={set("brand_color")} />
+            </div>
+          </Field>
+          <p className="-mt-1 text-xs text-muted">{t("brandColorHint")}</p>
+
+          {err && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{err}</p>}
+          <div className="mt-1 flex justify-end">
+            <Button type="submit" disabled={busy}>{busy ? c("saving") : c("save")}</Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}

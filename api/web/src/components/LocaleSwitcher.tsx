@@ -22,7 +22,7 @@ export default function LocaleSwitcher() {
 
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/15 p-1 text-sm"
+      className="inline-flex items-center gap-1 rounded-full border border-line p-1 text-sm"
       role="group"
       aria-label={t("language")}
       aria-busy={isPending}
@@ -33,10 +33,10 @@ export default function LocaleSwitcher() {
           type="button"
           onClick={() => switchTo(loc)}
           aria-pressed={loc === active}
-          className={`rounded-full px-3 py-1 transition-colors ${
+          className={`rounded-full px-3 py-1 font-medium transition-colors ${
             loc === active
-              ? "bg-foreground text-background"
-              : "text-foreground/70 hover:text-foreground"
+              ? "bg-accent text-on-accent"
+              : "text-muted hover:text-ink"
           }`}
         >
           {loc === "ar" ? t("arabic") : t("english")}

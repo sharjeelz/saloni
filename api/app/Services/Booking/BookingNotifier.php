@@ -33,7 +33,11 @@ class BookingNotifier
     {
         $appointment->loadMissing('salon', 'service', 'staff', 'customer');
 
-        $owners = User::where('role', 'owner')->where('is_active', true)
+        // Scope to this appointment's salon explicitly (not ambient tenant),
+        // so an untenanted caller can't blast every salon's owners.
+        $owners = User::withoutGlobalScope('salon')
+            ->where('salon_id', $appointment->salon_id)
+            ->where('role', 'owner')->where('is_active', true)
             ->whereNotNull('phone')->get();
 
         foreach ($owners as $owner) {

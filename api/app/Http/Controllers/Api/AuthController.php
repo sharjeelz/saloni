@@ -22,10 +22,10 @@ class AuthController extends Controller
     public function signup(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'salon_name' => ['required', 'string', 'max:255'],
-            'owner_name' => ['required', 'string', 'max:255'],
+            'salon_name' => ['required', 'string', 'min:2', 'max:255'],
+            'owner_name' => ['required', 'string', 'min:2', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
@@ -94,7 +94,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user->only(['id', 'name', 'email', 'phone', 'role', 'salon_id', 'title']),
             'salon' => $user->salon
-                ? $user->salon->only(['id', 'name', 'slug', 'plan', 'trial_ends_at'])
+                ? $user->salon->only(['id', 'name', 'slug', 'plan', 'trial_ends_at', 'timezone', 'locale'])
                 : null,
         ]);
     }

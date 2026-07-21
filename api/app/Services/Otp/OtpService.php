@@ -24,11 +24,15 @@ class OtpService
      * Create & send a code. Returns the OtpCode row (without the plain code).
      * In non-production the plain code is returned so it can be surfaced for testing.
      */
-    public function request(string $channel, string $destination): array
+    public function request(string $channel, string $destination, string $purpose = 'login', ?int $salonId = null): array
     {
-        // Throttle: block a new code if one was just issued.
-        $recent = OtpCode::where('channel', $channel)
+        $scope = fn ($q) => $q->where('channel', $channel)
             ->where('destination', $destination)
+            ->where('purpose', $purpose)
+            ->where('salon_id', $salonId);
+
+        // Throttle: block a new code if one was just issued (same scope).
+        $recent = OtpCode::query()->tap($scope)
             ->whereNull('consumed_at')
             ->where('created_at', '>', now()->subSeconds(self::RESEND_THROTTLE_SECONDS))
             ->exists();
@@ -37,9 +41,8 @@ class OtpService
             return ['throttled' => true];
         }
 
-        // Invalidate any prior live codes for this destination.
-        OtpCode::where('channel', $channel)
-            ->where('destination', $destination)
+        // Invalidate prior live codes for this exact scope only.
+        OtpCode::query()->tap($scope)
             ->whereNull('consumed_at')
             ->update(['consumed_at' => now()]);
 
@@ -47,6 +50,8 @@ class OtpService
 
         $otp = OtpCode::create([
             'channel' => $channel,
+            'purpose' => $purpose,
+            'salon_id' => $salonId,
             'destination' => $destination,
             'code_hash' => Hash::make($code),
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
@@ -73,26 +78,44 @@ class OtpService
     /**
      * Verify a submitted code. Returns true on success (and consumes the code).
      */
-    public function verify(string $channel, string $destination, string $code): bool
+    public function verify(string $channel, string $destination, string $code, string $purpose = 'login', ?int $salonId = null): bool
+    {
+        $otp = $this->check($channel, $destination, $code, $purpose, $salonId);
+        if (! $otp) {
+            return false;
+        }
+
+        $this->consume($otp);
+
+        return true;
+    }
+
+    /**
+     * Validate a code (counts the attempt) but DON'T consume it — lets the
+     * caller do extra work (e.g. resolve which salon to log into) before
+     * finalizing. Returns the matching row, or null if invalid/expired.
+     */
+    public function check(string $channel, string $destination, string $code, string $purpose = 'login', ?int $salonId = null): ?OtpCode
     {
         $otp = OtpCode::where('channel', $channel)
             ->where('destination', $destination)
+            ->where('purpose', $purpose)
+            ->where('salon_id', $salonId)
             ->whereNull('consumed_at')
             ->latest('id')
             ->first();
 
         if (! $otp || $otp->isExpired() || $otp->attempts >= self::MAX_ATTEMPTS) {
-            return false;
+            return null;
         }
 
         $otp->increment('attempts');
 
-        if (! Hash::check($code, $otp->code_hash)) {
-            return false;
-        }
+        return Hash::check($code, $otp->code_hash) ? $otp : null;
+    }
 
+    public function consume(OtpCode $otp): void
+    {
         $otp->update(['consumed_at' => now()]);
-
-        return true;
     }
 }

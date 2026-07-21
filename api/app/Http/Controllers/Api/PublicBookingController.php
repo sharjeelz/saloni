@@ -132,9 +132,9 @@ class PublicBookingController extends Controller
     public function requestOtp(Request $request, Salon $salon): JsonResponse
     {
         $this->pin($salon);
-        $data = $request->validate(['phone' => ['required', 'string', 'max:20']]);
+        $data = $request->validate(['phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE]]);
 
-        $result = $this->otp->request('phone', $data['phone']);
+        $result = $this->otp->request('phone', $data['phone'], 'booking', Tenancy::id());
         if ($result['throttled'] ?? false) {
             return response()->json(['message' => 'A code was just sent. Please wait a moment.'], 429);
         }
@@ -159,12 +159,12 @@ class PublicBookingController extends Controller
             'staff_id' => ['required', 'integer'],
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'time' => ['required', 'date_format:H:i'],
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'code' => ['required', 'string', 'size:6'],
         ]);
 
-        if (! $this->otp->verify('phone', $data['phone'], $data['code'])) {
+        if (! $this->otp->verify('phone', $data['phone'], $data['code'], 'booking', Tenancy::id())) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
         }
 
