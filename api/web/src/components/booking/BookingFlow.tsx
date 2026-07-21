@@ -39,6 +39,7 @@ export default function BookingFlow({ slug }: { slug: string }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
+  const [debugCode, setDebugCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ reference: string; starts_at: string; service: string; staff: string } | null>(null);
@@ -102,7 +103,8 @@ export default function BookingFlow({ slug }: { slug: string }) {
     setError(null);
     setBusy(true);
     try {
-      await post(`/book/${slug}/otp`, { phone });
+      const r = await post<{ debug_code?: string }>(`/book/${slug}/otp`, { phone });
+      setDebugCode(r.debug_code ?? null); // only returned outside production
       setStep(3);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong.");
@@ -280,6 +282,11 @@ export default function BookingFlow({ slug }: { slug: string }) {
           <div>
             <h1 className="mb-2 font-[family-name:var(--font-display)] text-2xl font-semibold text-ink">{t("verify")}</h1>
             <p className="mb-4 text-sm text-muted">{t("codeSent", { phone })}</p>
+            {debugCode && (
+              <p className="mb-4 rounded-lg bg-gold-soft px-3 py-2 text-center text-sm text-gold" dir="ltr">
+                Test mode — your code is <b className="tnum">{debugCode}</b>
+              </p>
+            )}
             <div className="flex flex-col gap-4">
               <Field label={t("code")}>
                 <Input inputMode="numeric" dir="ltr" maxLength={6} className="tracking-[0.4em]" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
