@@ -96,7 +96,7 @@ export default function CalendarPage() {
         <div className="grid gap-2.5">
           {data.data.map((a) => (
             <Card key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
-              <span className="w-14 font-mono text-sm text-accent-ink tnum" dir="ltr">{time(a.starts_at)}</span>
+              <span className="shrink-0 whitespace-nowrap font-mono text-sm text-accent-ink tnum" dir="ltr">{time(a.starts_at)}</span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">{a.customer?.name}</p>
                 <p className="text-sm text-muted">{a.service?.name} · {t("with")} {a.staff?.name}</p>
