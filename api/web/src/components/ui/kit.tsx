@@ -22,7 +22,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 export function Button({ variant = "primary", className = "", ...props }: ButtonProps) {
   const styles = {
-    primary: "bg-accent text-white hover:opacity-90 shadow-[var(--shadow)]",
+    primary: "bg-accent text-on-accent hover:opacity-90 shadow-[var(--shadow)]",
     ghost: "border border-line text-ink hover:border-accent bg-surface",
     danger: "border border-line text-crit hover:border-crit bg-surface",
   }[variant];
@@ -71,9 +71,9 @@ export function Badge({ tone = "muted", children }: { tone?: string; children: R
   const map: Record<string, string> = {
     accent: "bg-accent-soft text-accent-ink",
     gold: "bg-gold-soft text-gold",
-    ok: "text-ok",
-    warn: "text-warn",
-    crit: "text-crit",
+    ok: "bg-ok/10 text-ok",
+    warn: "bg-warn/10 text-warn",
+    crit: "bg-crit/10 text-crit",
     muted: "bg-surface-2 text-muted",
   };
   return (
@@ -107,10 +107,18 @@ export function LoadError({ onRetry }: { onRetry: () => void }) {
 
 export function EmptyState({ message, action }: { message: string; action?: React.ReactNode }) {
   return (
-    <div className="grid min-h-[36vh] place-items-center rounded-2xl border border-dashed border-line text-center">
-      <div>
-        <p className="text-muted">{message}</p>
-        {action && <div className="mt-3 flex justify-center">{action}</div>}
+    <div className="grid min-h-[40vh] place-items-center rounded-2xl border border-dashed border-line text-center">
+      <div className="flex flex-col items-center px-6">
+        {/* Botanical sprig — the brand's quiet signature on empty screens */}
+        <span className="mb-4 grid size-14 place-items-center rounded-full bg-accent-soft text-accent">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 21V8" />
+            <path d="M12 12C12 9 9.5 6.5 6 6.5 6 10 8.5 12 12 12Z" />
+            <path d="M12 9c0-3 2.5-5.5 6-5.5 0 3.5-2.5 5.5-6 5.5Z" />
+          </svg>
+        </span>
+        <p className="max-w-xs text-pretty text-muted">{message}</p>
+        {action && <div className="mt-4 flex justify-center">{action}</div>}
       </div>
     </div>
   );

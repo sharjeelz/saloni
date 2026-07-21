@@ -103,11 +103,14 @@ export default function CalendarPage() {
               </div>
               <Badge tone={STATUS_TONE[a.status]}>{statusLabel(a.status)}</Badge>
               {a.status === "pending" && (
-                <Button variant="ghost" onClick={() => setStatus(a, "confirmed")}>{t("confirm")}</Button>
-              )}
-              {(a.status === "confirmed" || a.status === "pending") && (
                 <div className="flex gap-1.5">
-                  <Button variant="ghost" onClick={() => setStatus(a, "done")}>{t("markDone")}</Button>
+                  <Button onClick={() => setStatus(a, "confirmed")}>{t("confirm")}</Button>
+                  <Button variant="danger" onClick={() => setStatus(a, "cancelled")}>{t("markCancelled")}</Button>
+                </div>
+              )}
+              {a.status === "confirmed" && (
+                <div className="flex gap-1.5">
+                  <Button onClick={() => setStatus(a, "done")}>{t("markDone")}</Button>
                   <Button variant="ghost" onClick={() => setStatus(a, "no_show")}>{t("markNoShow")}</Button>
                   <Button variant="danger" onClick={() => setStatus(a, "cancelled")}>{t("markCancelled")}</Button>
                 </div>
@@ -231,7 +234,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
                   onClick={() => setForm((f) => ({ ...f, time: s.time }))}
                   className={`rounded-lg border px-3 py-1.5 text-sm font-medium tnum transition-colors ${
                     form.time === s.time
-                      ? "border-accent bg-accent text-white"
+                      ? "border-accent bg-accent text-on-accent"
                       : "border-line text-ink hover:border-accent"
                   }`}
                 >

@@ -11,6 +11,7 @@
   --accent: #1E5C4A;
   --accent-ink: #16493A;
   --accent-soft: #E7F0EB;
+  --on-accent: #FFFFFF;
   --gold: #9A7736;
   --gold-soft: #F3EAD6;
   --ok: #2E7D5B;
@@ -31,6 +32,7 @@
     --accent: #6FBFA3;
     --accent-ink: #8FD3B9;
     --accent-soft: #1D2A25;
+    --on-accent: #0F1512;
     --gold: #C7A461;
     --gold-soft: #2A2418;
     --ok: #57B98C;
@@ -44,7 +46,7 @@
 :root[data-theme="light"] {
   --ground: #FAF8F3; --surface: #FFFFFF; --surface-2: #F3EFE7; --ink: #1B211E;
   --muted: #5E6B64; --line: #E5E0D5; --accent: #1E5C4A; --accent-ink: #16493A;
-  --accent-soft: #E7F0EB; --gold: #9A7736; --gold-soft: #F3EAD6; --ok: #2E7D5B;
+  --accent-soft: #E7F0EB; --on-accent: #FFFFFF; --gold: #9A7736; --gold-soft: #F3EAD6; --ok: #2E7D5B;
   --warn: #A9741A; --crit: #B23A48;
   --shadow: 0 1px 2px rgba(27,33,30,.05), 0 6px 20px rgba(27,33,30,.07);
   --shadow-lg: 0 8px 40px rgba(27,33,30,.12);
@@ -52,7 +54,7 @@
 :root[data-theme="dark"] {
   --ground: #121614; --surface: #1A201D; --surface-2: #212824; --ink: #ECEAE2;
   --muted: #98A69D; --line: #2B332E; --accent: #6FBFA3; --accent-ink: #8FD3B9;
-  --accent-soft: #1D2A25; --gold: #C7A461; --gold-soft: #2A2418; --ok: #57B98C;
+  --accent-soft: #1D2A25; --on-accent: #0F1512; --gold: #C7A461; --gold-soft: #2A2418; --ok: #57B98C;
   --warn: #D0A24A; --crit: #E0798A;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.3);
   --shadow-lg: 0 8px 40px rgba(0,0,0,.45);
@@ -68,6 +70,7 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
   --color-ok: var(--ok);
@@ -93,6 +96,9 @@ body {
 
 /* Numeric data lines up in columns everywhere. */
 .tnum { font-variant-numeric: tabular-nums; }
+
+/* Brand the native form controls. */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 
 ::selection { background: color-mix(in srgb, var(--gold) 30%, transparent); }
 

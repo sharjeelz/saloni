@@ -79,7 +79,7 @@ export default function DashboardPage() {
             key={r}
             onClick={() => setRange(r)}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              range === r ? "bg-accent text-white" : "border border-line text-muted hover:text-ink"
+              range === r ? "bg-accent text-on-accent" : "border border-line text-muted hover:text-ink"
             }`}
           >
             {t(`range${r.charAt(0).toUpperCase()}${r.slice(1)}`)}

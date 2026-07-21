@@ -24,11 +24,11 @@ export default function HomePage({
           صالون · Salon
         </span>
         <div className="flex items-center gap-4">
-          <nav className="hidden items-center gap-5 text-sm text-foreground/70 sm:flex">
-            <a href="#features" className="hover:text-foreground">
+          <nav className="hidden items-center gap-5 text-sm text-muted sm:flex">
+            <a href="#features" className="hover:text-ink">
               {nav("features")}
             </a>
-            <a href="#pricing" className="hover:text-foreground">
+            <a href="#pricing" className="hover:text-ink">
               {nav("pricing")}
             </a>
           </nav>
@@ -39,28 +39,28 @@ export default function HomePage({
       {/* Hero */}
       <main className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-16 text-center sm:px-10">
         <div className="flex max-w-2xl flex-col items-center gap-5">
-          <p className="font-mono text-xs uppercase tracking-widest text-foreground/50">
+          <p className="font-mono text-xs uppercase tracking-widest text-muted">
             {t("kicker")}
           </p>
           <h1 className="text-balance text-4xl font-semibold leading-tight sm:text-5xl">
             {t("title")}
           </h1>
-          <p className="text-pretty text-lg text-foreground/70">{t("subtitle")}</p>
+          <p className="text-pretty text-lg text-muted">{t("subtitle")}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <a
               href="#"
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-90"
+              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:opacity-90"
             >
               {t("ctaPrimary")}
             </a>
             <a
               href="#features"
-              className="rounded-full border border-black/10 px-5 py-2.5 text-sm font-medium hover:border-black/25 dark:border-white/15 dark:hover:border-white/30"
+              className="rounded-full border border-line px-5 py-2.5 text-sm font-medium hover:border-accent"
             >
               {t("ctaSecondary")}
             </a>
           </div>
-          <p className="font-mono text-xs text-foreground/50">{t("trial")}</p>
+          <p className="font-mono text-xs text-muted">{t("trial")}</p>
         </div>
 
         {/* Features */}
@@ -71,12 +71,12 @@ export default function HomePage({
           {featureKeys.map((key) => (
             <div
               key={key}
-              className="rounded-2xl border border-black/10 p-5 text-start dark:border-white/10"
+              className="rounded-2xl border border-line p-5 text-start"
             >
               <h3 className="mb-1.5 font-semibold">
                 {t(`features.${key}.title`)}
               </h3>
-              <p className="text-sm text-foreground/70">
+              <p className="text-sm text-muted">
                 {t(`features.${key}.body`)}
               </p>
             </div>

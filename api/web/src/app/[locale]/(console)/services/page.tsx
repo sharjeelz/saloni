@@ -277,7 +277,7 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
       ) : staffList.length === 0 ? (
         <div className="py-4 text-center">
           <p className="text-muted">{t("noStaffYet")}</p>
-          <Link href="/staff" className="mt-3 inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white">
+          <Link href="/staff" className="mt-3 inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-on-accent">
             {nav("staff")}
           </Link>
         </div>

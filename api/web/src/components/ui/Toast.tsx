@@ -20,14 +20,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ notify }}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex flex-col items-center gap-2">
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex flex-col items-center gap-2"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-lg)] ${
+            role={t.tone === "error" ? "alert" : "status"}
+            className={`pointer-events-auto flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-on-accent shadow-[var(--shadow-lg)] ${
               t.tone === "ok" ? "bg-accent" : "bg-crit"
             }`}
           >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+              {t.tone === "ok" ? <path d="M5 12l5 5L20 6" /> : <><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16.5v.01" /></>}
+            </svg>
             {t.message}
           </div>
         ))}

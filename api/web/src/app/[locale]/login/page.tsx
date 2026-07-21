@@ -59,16 +59,16 @@ export default function LoginPage() {
               "radial-gradient(circle at 80% 12%, var(--color-gold) 0, transparent 42%), radial-gradient(circle at 12% 88%, #fff 0, transparent 38%)",
           }}
         />
-        <span className="relative font-mono text-xs uppercase tracking-[0.28em] text-white/70">
+        <span className="relative font-mono text-xs uppercase tracking-[0.28em] text-on-accent/70">
           KSA · SaaS
         </span>
         <div className="relative">
           <div className="mb-6 h-px w-16 bg-[color:var(--color-gold)]" />
-          <h1 className="font-[family-name:var(--font-display)] text-5xl font-semibold leading-[1.15] text-white">
+          <h1 className="font-[family-name:var(--font-display)] text-5xl font-semibold leading-[1.15] text-on-accent">
             {t("tagline")}
           </h1>
         </div>
-        <span className="relative font-[family-name:var(--font-display)] text-2xl font-semibold text-white">
+        <span className="relative font-[family-name:var(--font-display)] text-2xl font-semibold text-on-accent">
           صالوني
         </span>
       </aside>
@@ -80,6 +80,15 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-1 items-center justify-center px-6 pb-16">
           <form onSubmit={submit} className="w-full max-w-sm">
+            {/* Compact brand moment on small screens (the panel is lg-only) */}
+            <div className="mb-6 lg:hidden">
+              <span className="inline-grid size-11 place-items-center rounded-xl bg-accent font-[family-name:var(--font-display)] text-xl font-bold text-on-accent">
+                ص
+              </span>
+              <p className="mt-3 text-pretty font-[family-name:var(--font-display)] text-xl font-semibold text-ink">
+                {t("tagline")}
+              </p>
+            </div>
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-gold">
               صالوني · Salooni
             </p>
@@ -125,7 +134,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-1 rounded-xl bg-accent px-4 py-3 font-medium text-white shadow-[var(--shadow)] transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="mt-1 rounded-xl bg-accent px-4 py-3 font-medium text-on-accent shadow-[var(--shadow)] transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {busy ? t("signingIn") : t("submit")}
               </button>

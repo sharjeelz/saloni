@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
@@ -36,10 +36,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const { user, salon, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   if (loading || !user) {
     return (
@@ -49,55 +53,82 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const brand = (
+    <div className="flex items-center gap-2 px-3 pb-6">
+      <span className="grid size-8 place-items-center rounded-lg bg-accent font-[family-name:var(--font-display)] text-lg font-bold text-on-accent">
+        ص
+      </span>
+      <span className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
+        {t("brand")}
+      </span>
+    </div>
+  );
+
+  const nav = (
+    <>
+      <nav className="flex flex-col gap-1">
+        {NAV.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-surface-2 hover:text-ink"
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                {ICONS[item.icon]}
+              </svg>
+              {t(`nav.${item.key}`)}
+            </Link>
+          );
+        })}
+      </nav>
+      <button
+        type="button"
+        onClick={() => { void logout().then(() => router.replace("/login")); }}
+        className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-crit"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+        </svg>
+        {t("nav.logout")}
+      </button>
+    </>
+  );
+
   return (
     <div className="flex min-h-dvh bg-ground">
-      {/* Sidebar — sits at the inline-start (right in RTL) */}
+      {/* Desktop sidebar — inline-start (right in RTL) */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-e border-line bg-surface px-3 py-5 md:flex">
-        <div className="flex items-center gap-2 px-3 pb-6">
-          <span className="grid size-8 place-items-center rounded-lg bg-accent font-[family-name:var(--font-display)] text-lg font-bold text-white">
-            ص
-          </span>
-          <span className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
-            {t("brand")}
-          </span>
-        </div>
-
-        <nav className="flex flex-col gap-1">
-          {NAV.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-accent-soft text-accent-ink"
-                    : "text-muted hover:bg-surface-2 hover:text-ink"
-                }`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  {ICONS[item.icon]}
-                </svg>
-                {t(`nav.${item.key}`)}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <button
-          type="button"
-          onClick={() => { void logout().then(() => router.replace("/login")); }}
-          className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-crit"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-          </svg>
-          {t("nav.logout")}
-        </button>
+        {brand}
+        {nav}
       </aside>
 
+      {/* Mobile drawer */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-30 md:hidden">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
+          <aside className="absolute inset-y-0 start-0 flex w-64 flex-col border-e border-line bg-surface px-3 py-5">
+            {brand}
+            {nav}
+          </aside>
+        </div>
+      )}
+
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-ground/80 px-6 py-3 backdrop-blur">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-ground/80 px-4 py-3 backdrop-blur sm:px-6">
+          <button
+            type="button"
+            aria-label={t("nav.dashboard")}
+            onClick={() => setMenuOpen(true)}
+            className="grid size-9 shrink-0 place-items-center rounded-lg border border-line text-muted hover:text-ink md:hidden"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </button>
           <div className="min-w-0">
             <p className="truncate font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
               {salon?.name}
@@ -106,13 +137,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <div className="ms-auto flex items-center gap-2">
             <LocaleSwitcher />
             <ThemeToggle />
-            <span className="grid size-9 place-items-center rounded-full bg-gold-soft font-semibold text-gold">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gold-soft font-semibold text-gold">
               {user.name.charAt(0)}
             </span>
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-7">{children}</main>
+        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-7">{children}</main>
       </div>
     </div>
   );
