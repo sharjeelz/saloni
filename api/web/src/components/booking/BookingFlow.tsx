@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ApiError, get, post } from "@/lib/api";
+import { Link } from "@/i18n/navigation";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { Button, Field, Input, Spinner } from "@/components/ui/kit";
 
@@ -42,7 +43,8 @@ export default function BookingFlow({ slug }: { slug: string }) {
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ reference: string; starts_at: string; service: string; staff: string } | null>(null);
+  const [existingToken, setExistingToken] = useState<string | null>(null);
+  const [result, setResult] = useState<{ reference: string; manage_token: string; starts_at: string; service: string; staff: string } | null>(null);
 
   // Load salon + branches + services.
   useEffect(() => {
@@ -114,16 +116,22 @@ export default function BookingFlow({ slug }: { slug: string }) {
   async function confirm() {
     if (!service || !branchId || !pick) return;
     setError(null);
+    setExistingToken(null);
     setBusy(true);
     try {
-      const res = await post<{ data: { reference: string; starts_at: string; service: string; staff: string } }>(
+      const res = await post<{ data: { reference: string; manage_token: string; starts_at: string; service: string; staff: string } }>(
         `/book/${slug}/appointments`,
         { branch_id: branchId, service_id: service.id, staff_id: pick.staffId, date, time: pick.time, name, phone, code },
       );
       setResult(res.data);
       setStep(4);
     } catch (e) {
-      setError(e instanceof ApiError && e.status === 422 ? t("wrongCode") : (e instanceof ApiError ? e.message : "Something went wrong."));
+      if (e instanceof ApiError && e.status === 422) { setError(t("wrongCode")); }
+      else if (e instanceof ApiError && e.status === 409) {
+        setError(e.message);
+        const existing = (e.body as { existing?: { manage_token?: string } })?.existing;
+        if (existing?.manage_token) setExistingToken(existing.manage_token);
+      } else { setError(e instanceof ApiError ? e.message : "Something went wrong."); }
     } finally { setBusy(false); }
   }
 
@@ -291,7 +299,16 @@ export default function BookingFlow({ slug }: { slug: string }) {
               <Field label={t("code")}>
                 <Input inputMode="numeric" dir="ltr" maxLength={6} className="tracking-[0.4em]" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
               </Field>
-              {error && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
+              {error && (
+                <div className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">
+                  <p>{error}</p>
+                  {existingToken && (
+                    <Link href={`/book/manage/${existingToken}`} className="mt-1 inline-block font-medium underline">
+                      {t("manageExisting")}
+                    </Link>
+                  )}
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => setStep(2)}>{t("back")}</Button>
                 <Button className="flex-1" disabled={busy || code.length !== 6} onClick={confirm}>
@@ -316,6 +333,9 @@ export default function BookingFlow({ slug }: { slug: string }) {
               <p className="mt-2 text-sm text-ink">{whenLabel(result.starts_at)}</p>
               <p className="mt-3 font-mono text-xs text-muted" dir="ltr">{t("reference")}: {result.reference}</p>
             </div>
+            <Link href={`/book/manage/${result.manage_token}`} className="mt-4 inline-block text-sm font-medium text-accent-ink hover:underline">
+              {t("manageExisting")}
+            </Link>
             <button
               onClick={() => { setStep(0); setService(null); setPick(null); setName(""); setPhone(""); setCode(""); setResult(null); }}
               className="mt-6 text-sm font-medium text-accent-ink hover:underline"

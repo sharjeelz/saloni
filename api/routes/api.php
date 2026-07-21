@@ -35,6 +35,7 @@ Route::post('/auth/otp/verify', [OtpController::class, 'verify']);
 // Manage an existing booking by opaque token (cancel / reschedule link).
 Route::prefix('book/manage/{token}')->group(function () {
     Route::get('/', [PublicBookingController::class, 'manageShow']);
+    Route::get('/availability', [PublicBookingController::class, 'manageAvailability']);
     Route::post('/cancel', [PublicBookingController::class, 'cancel']);
     Route::post('/reschedule', [PublicBookingController::class, 'reschedule']);
 });

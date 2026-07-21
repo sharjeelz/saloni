@@ -175,6 +175,31 @@ class PublicBookingController extends Controller
 
         $customer = $this->booking->resolveCustomer($data['name'], $data['phone']);
 
+        // One active booking per customer (per salon) via the public page —
+        // configurable; admin walk-ins bypass this. Point them at the existing
+        // booking so they can cancel it.
+        $max = (int) config('booking.max_active_per_customer', 1);
+        if ($max > 0) {
+            $active = Appointment::where('customer_id', $customer->id)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->where('starts_at', '>', now())
+                ->orderBy('starts_at')
+                ->get();
+
+            if ($active->count() >= $max) {
+                $existing = $active->first();
+
+                return response()->json([
+                    'message' => 'You already have an upcoming booking. Please cancel it before booking again, or use a different number.',
+                    'existing' => [
+                        'reference' => $existing->reference,
+                        'manage_token' => $existing->public_token,
+                        'starts_at' => $existing->starts_at,
+                    ],
+                ], 409);
+            }
+        }
+
         try {
             $appointment = $this->booking->book(
                 $branch, $service, $staff, $customer, $data['date'], $data['time'], source: 'online',
@@ -204,8 +229,30 @@ class PublicBookingController extends Controller
         $appointment = $this->resolveByToken($token);
 
         return response()->json([
-            'data' => $appointment->load('service:id,name,duration_min', 'staff:id,name', 'branch:id,name,address'),
+            'data' => $appointment->load(
+                'service:id,name,duration_min',
+                'staff:id,name',
+                'branch:id,name,address',
+                'salon:id,name,brand_color,timezone',
+            ),
         ]);
+    }
+
+    /** Available slots to reschedule THIS booking (excludes its own time). */
+    public function manageAvailability(Request $request, string $token): JsonResponse
+    {
+        $appointment = $this->resolveByToken($token);
+        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today']]);
+
+        $slots = $this->availability->slots(
+            Branch::findOrFail($appointment->branch_id),
+            Service::findOrFail($appointment->service_id),
+            $appointment->staff_id,
+            $data['date'],
+            $appointment->id, // ignore this appointment so its slot stays offered
+        );
+
+        return response()->json(['data' => $slots]);
     }
 
     /** Cancel from the manage link (E6-4). */

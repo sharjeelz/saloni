@@ -84,6 +84,26 @@ class BookingFlowTest extends TestCase
         ]);
     }
 
+    public function test_customer_limited_to_one_active_booking_until_cancelled(): void
+    {
+        $phone = '+966500000123';
+        $book = fn (string $time) => $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => $time, 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ]);
+
+        // First booking is fine.
+        $token = $book('11:00')->assertCreated()->json('data.manage_token');
+
+        // A second, with the same number, is blocked — and points at the first.
+        $book('13:00')->assertStatus(409)->assertJsonPath('existing.manage_token', $token);
+
+        // After cancelling the first, they can book again.
+        $this->postJson("/api/book/manage/{$token}/cancel")->assertOk();
+        $book('13:00')->assertCreated();
+    }
+
     public function test_booking_requires_a_valid_otp(): void
     {
         $this->postJson('/api/book/glow/appointments', [
