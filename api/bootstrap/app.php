@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\SetTenant::class,
             'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
+
+        // Set the tenant BEFORE route-model binding runs, so the
+        // BelongsToSalon global scope isolates bound models (e.g. {branch}).
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: \App\Http\Middleware\SetTenant::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
