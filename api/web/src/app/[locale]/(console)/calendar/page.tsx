@@ -149,6 +149,29 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value, ...(k !== "customer_name" && k !== "customer_phone" ? { time: "" } : {}) }));
 
+  // Customer lookup — pick an existing profile instead of retyping.
+  const [custSearch, setCustSearch] = useState("");
+  const [custMatches, setCustMatches] = useState<{ id: number; name: string; phone: string }[]>([]);
+  const [showMatches, setShowMatches] = useState(false);
+
+  useEffect(() => {
+    const term = custSearch.trim();
+    if (term.length < 2) { setCustMatches([]); return; }
+    let live = true;
+    const id = setTimeout(() => {
+      get<{ data: { id: number; name: string; phone: string }[] }>(`/customers?q=${encodeURIComponent(term)}`)
+        .then((r) => { if (live) { setCustMatches(r.data); setShowMatches(true); } })
+        .catch(() => {});
+    }, 300);
+    return () => { live = false; clearTimeout(id); };
+  }, [custSearch]);
+
+  function pickCustomer(cust: { name: string; phone: string }) {
+    setForm((f) => ({ ...f, customer_name: cust.name, customer_phone: cust.phone }));
+    setCustSearch("");
+    setShowMatches(false);
+  }
+
   const ready = form.branch_id && form.service_id && form.staff_id && form.date;
 
   // Load real available slots whenever the selection changes.
@@ -188,6 +211,35 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={t("newWalkIn")}>
       <form onSubmit={save} className="flex flex-col gap-3.5">
+        {/* Pick an existing customer, or fill the fields for a new one */}
+        <div className="relative">
+          <Field label={t("existingCustomer")}>
+            <Input
+              value={custSearch}
+              onChange={(e) => setCustSearch(e.target.value)}
+              onFocus={() => custMatches.length > 0 && setShowMatches(true)}
+              placeholder={t("searchCustomer")}
+            />
+          </Field>
+          {showMatches && custSearch.trim().length >= 2 && (
+            <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-line bg-surface shadow-[var(--shadow-lg)]">
+              {custMatches.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-muted">{t("noCustomerMatch")}</li>
+              ) : custMatches.map((m) => (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => pickCustomer(m)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-start text-sm transition-colors hover:bg-surface-2"
+                  >
+                    <span className="text-ink">{m.name}</span>
+                    <span className="text-muted" dir="ltr">{m.phone}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("customer")}><Input required value={form.customer_name} onChange={set("customer_name")} /></Field>
           <Field label={t("customerPhone")}><Input required dir="ltr" placeholder="+9665…" value={form.customer_phone} onChange={set("customer_phone")} /></Field>

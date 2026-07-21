@@ -7,13 +7,14 @@ import { useAuth } from "@/lib/auth";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import ThemeToggle from "./ThemeToggle";
 
-type IconName = "dashboard" | "calendar" | "services" | "staff" | "branches" | "timeOff" | "billing" | "settings";
+type IconName = "dashboard" | "calendar" | "services" | "staff" | "customers" | "branches" | "timeOff" | "billing" | "settings";
 
 const ICONS: Record<IconName, React.ReactNode> = {
   dashboard: <path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z" />,
   calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></>,
   services: <><path d="M12 2l2.4 6.9H22l-6 4.3 2.3 7-6.3-4.4L5.7 20l2.3-7-6-4.3h7.6z" /></>,
   staff: <><circle cx="9" cy="8" r="3.2" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 11a3 3 0 1 0-1-5.8M21.5 20a5.5 5.5 0 0 0-4-5.3" /></>,
+  customers: <><circle cx="12" cy="7.5" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></>,
   branches: <><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" /></>,
   timeOff: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   billing: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
@@ -25,6 +26,7 @@ const NAV: { href: string; key: string; icon: IconName }[] = [
   { href: "/calendar", key: "calendar", icon: "calendar" },
   { href: "/services", key: "services", icon: "services" },
   { href: "/staff", key: "staff", icon: "staff" },
+  { href: "/customers", key: "customers", icon: "customers" },
   { href: "/branches", key: "branches", icon: "branches" },
   { href: "/time-off", key: "timeOff", icon: "timeOff" },
   { href: "/billing", key: "billing", icon: "billing" },
