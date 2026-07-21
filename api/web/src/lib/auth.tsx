@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { clearToken, get, post, setToken } from "./api";
+import { clearToken, get, post } from "./api";
 
 export type User = {
   id: number;
@@ -28,7 +28,6 @@ type AuthState = {
   user: User | null;
   salon: Salon | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -56,12 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await post<{ token: string; user: User }>("/auth/login", { email, password });
-    setToken(res.token);
-    await refresh();
-  }, [refresh]);
-
   const logout = useCallback(async () => {
     try {
       await post("/auth/logout");
@@ -74,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, salon, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, salon, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

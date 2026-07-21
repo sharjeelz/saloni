@@ -96,7 +96,7 @@ export default function ServicesPage() {
                 <p className="mt-0.5 text-sm text-muted">
                   {t("performedBy")}:{" "}
                   <span className="text-ink">
-                    {s.staff && s.staff.length > 0 ? s.staff.map((m) => m.name).join("، ") : t("noneYet")}
+                    {s.staff && s.staff.length > 0 ? s.staff.map((m) => m.name).join(locale === "ar" ? "، " : ", ") : t("noneYet")}
                   </span>
                 </p>
               </div>

@@ -22,7 +22,8 @@ type Dashboard = {
 
 const STATUS_META: Record<string, { key: string; color: string }> = {
   confirmed: { key: "statusConfirmed", color: "var(--color-accent)" },
-  done: { key: "statusDone", color: "var(--color-gold)" },
+  pending: { key: "statusPending", color: "var(--color-gold)" },
+  done: { key: "statusDone", color: "var(--color-ok)" },
   no_show: { key: "statusNoShow", color: "var(--color-warn)" },
   cancelled: { key: "statusCancelled", color: "var(--color-muted)" },
 };
@@ -34,17 +35,25 @@ export default function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<"today" | "week" | "month">("today");
 
   useEffect(() => {
+    const iso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const to = new Date();
+    const from = new Date();
+    if (range === "week") from.setDate(from.getDate() - 6);
+    if (range === "month") from.setDate(from.getDate() - 29);
+
     let live = true;
     setLoading(true);
     setError(false);
-    get<Dashboard>("/dashboard")
+    get<Dashboard>(`/dashboard?from=${iso(from)}&to=${iso(to)}`)
       .then((d) => live && setData(d))
       .catch(() => live && setError(true))
       .finally(() => live && setLoading(false));
     return () => { live = false; };
-  }, []);
+  }, [range]);
 
   const money = (n: number, currency: string) =>
     new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
@@ -54,19 +63,48 @@ export default function DashboardPage() {
   const day = (iso: string, tz: string) =>
     new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
 
-  if (loading) return <DashboardSkeleton />;
+  const header = (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">
+          {t("greeting", { name: user?.name ?? "" })}
+        </p>
+        <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-semibold text-ink">
+          {t("title")}
+        </h1>
+      </div>
+      <div className="flex gap-1.5">
+        {(["today", "week", "month"] as const).map((r) => (
+          <button
+            key={r}
+            onClick={() => setRange(r)}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              range === r ? "bg-accent text-white" : "border border-line text-muted hover:text-ink"
+            }`}
+          >
+            {t(`range${r.charAt(0).toUpperCase()}${r.slice(1)}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (loading) return <div className="mx-auto max-w-5xl">{header}<DashboardSkeleton /></div>;
 
   if (error || !data) {
     return (
-      <div className="grid min-h-[50vh] place-items-center text-center">
-        <div>
-          <p className="text-muted">{t("loadError")}</p>
-          <button
-            onClick={() => location.reload()}
-            className="mt-3 rounded-full border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent"
-          >
-            {t("retry")}
-          </button>
+      <div className="mx-auto max-w-5xl">
+        {header}
+        <div className="grid min-h-[40vh] place-items-center text-center">
+          <div>
+            <p className="text-muted">{t("loadError")}</p>
+            <button
+              onClick={() => location.reload()}
+              className="mt-3 rounded-full border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent"
+            >
+              {t("retry")}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -81,12 +119,7 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">
-        {t("greeting", { name: user?.name ?? "" })}
-      </p>
-      <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-semibold text-ink">
-        {t("title")}
-      </h1>
+      {header}
 
       {/* Signature hero — collected revenue in brass, day status stripe */}
       <section className="mt-6 grid gap-4 md:grid-cols-[1.3fr_1fr]">

@@ -134,7 +134,7 @@ class PublicBookingController extends Controller
         $this->pin($salon);
         $data = $request->validate(['phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE]]);
 
-        $result = $this->otp->request('phone', $data['phone']);
+        $result = $this->otp->request('phone', $data['phone'], 'booking', Tenancy::id());
         if ($result['throttled'] ?? false) {
             return response()->json(['message' => 'A code was just sent. Please wait a moment.'], 429);
         }
@@ -164,7 +164,7 @@ class PublicBookingController extends Controller
             'code' => ['required', 'string', 'size:6'],
         ]);
 
-        if (! $this->otp->verify('phone', $data['phone'], $data['code'])) {
+        if (! $this->otp->verify('phone', $data['phone'], $data['code'], 'booking', Tenancy::id())) {
             return response()->json(['message' => 'Invalid or expired code.'], 422);
         }
 

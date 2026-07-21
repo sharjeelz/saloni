@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 export function Modal({
   open, onClose, title, children,
 }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  const c = useTranslations("app.common");
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -24,7 +26,7 @@ export function Modal({
           </h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={c("close")}
             className="grid size-8 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

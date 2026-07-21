@@ -38,8 +38,20 @@ class WorkingHourController extends Controller
             ],
         ]);
 
-        DB::transaction(function () use ($branch, $data) {
-            $branch->workingHours()->delete();
+        // Replace only the scopes present in the payload — always the branch
+        // default (user_id null), plus any specific staff included — so other
+        // staff members' custom hours are preserved, not wiped.
+        $staffIds = collect($data['hours'])->pluck('user_id')->filter()->unique()->values();
+
+        DB::transaction(function () use ($branch, $data, $staffIds) {
+            $branch->workingHours()
+                ->where(function ($q) use ($staffIds) {
+                    $q->whereNull('user_id');
+                    if ($staffIds->isNotEmpty()) {
+                        $q->orWhereIn('user_id', $staffIds);
+                    }
+                })
+                ->delete();
 
             foreach ($data['hours'] as $row) {
                 $branch->workingHours()->create([

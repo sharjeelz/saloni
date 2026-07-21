@@ -19,6 +19,8 @@ type Plan = {
 };
 type Invoice = { id: number; number: string; total: string; currency: string; issued_at: string; status: string };
 
+const INVOICE_TONE: Record<string, string> = { paid: "accent", unpaid: "warn", void: "muted" };
+
 export default function BillingPage() {
   const t = useTranslations("app.billing");
   const c = useTranslations("app.common");
@@ -50,6 +52,20 @@ export default function BillingPage() {
     finally { setBusy(null); }
   }
 
+  async function cancel() {
+    if (!confirm(t("confirmCancel"))) return;
+    setBusy("__cancel");
+    try {
+      await post("/billing/cancel");
+      notify(t("canceled"));
+      status.reload();
+    } catch { notify(c("error"), "error"); }
+    finally { setBusy(null); }
+  }
+
+  const invoiceLabel = (s: string) =>
+    ({ paid: t("paid"), unpaid: t("unpaid"), void: t("void") } as Record<string, string>)[s] ?? s;
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("title")} />
@@ -62,9 +78,16 @@ export default function BillingPage() {
             {activeKey ?? (status.data.on_trial ? t("onTrial") : status.data.plan)}
           </p>
         </div>
-        {status.data.on_trial && status.data.trial_ends_at && (
-          <Badge tone="gold">{t("trialEnds", { date: date(status.data.trial_ends_at) })}</Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {status.data.on_trial && status.data.trial_ends_at && (
+            <Badge tone="gold">{t("trialEnds", { date: date(status.data.trial_ends_at) })}</Badge>
+          )}
+          {activeKey && (
+            <Button variant="danger" disabled={busy === "__cancel"} onClick={cancel}>
+              {t("cancel")}
+            </Button>
+          )}
+        </div>
       </Card>
 
       {/* Plans */}
@@ -114,7 +137,7 @@ export default function BillingPage() {
                 <span className="font-mono text-sm text-ink" dir="ltr">{inv.number}</span>
                 <span className="text-sm text-muted">{date(inv.issued_at)}</span>
                 <span className="ms-auto font-medium text-ink tnum">{money(Number(inv.total), inv.currency)}</span>
-                <Badge tone="accent">{t("paid")}</Badge>
+                <Badge tone={INVOICE_TONE[inv.status] ?? "muted"}>{invoiceLabel(inv.status)}</Badge>
               </li>
             ))}
           </ul>
