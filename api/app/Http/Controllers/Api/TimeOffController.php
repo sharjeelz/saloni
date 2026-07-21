@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Salon;
 use App\Models\TimeOff;
 use App\Support\Tenancy;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -51,6 +53,12 @@ class TimeOffController extends Controller
         if ($user->isStaff()) {
             $data['user_id'] = $user->id;
         }
+
+        // Interpret the entered times in the salon timezone → store UTC, so the
+        // availability engine blocks the right window.
+        $tz = Salon::find($salonId)?->timezone ?? 'Asia/Riyadh';
+        $data['starts_at'] = Carbon::parse($data['starts_at'], $tz)->utc();
+        $data['ends_at'] = Carbon::parse($data['ends_at'], $tz)->utc();
 
         $timeOff = TimeOff::create($data);
 

@@ -44,8 +44,38 @@
       "services": "Services",
       "staff": "Team",
       "branches": "Branches",
+      "timeOff": "Time off",
       "billing": "Subscription",
+      "settings": "Settings",
       "logout": "Sign out"
+    },
+    "settings": {
+      "title": "Salon settings",
+      "name": "Salon name",
+      "phone": "Phone",
+      "vatNumber": "VAT number",
+      "brandColor": "Brand color",
+      "timezone": "Timezone",
+      "locale": "Default language",
+      "logo": "Logo URL",
+      "arabic": "Arabic",
+      "english": "English",
+      "saved": "Settings saved."
+    },
+    "timeoff": {
+      "title": "Time off & closures",
+      "add": "Add block",
+      "branch": "Branch",
+      "who": "Applies to",
+      "wholeBranch": "Whole branch (closure)",
+      "staff": "Staff member",
+      "from": "From",
+      "to": "To",
+      "reason": "Reason (optional)",
+      "empty": "No time off scheduled.",
+      "closure": "Branch closure",
+      "added": "Time off added.",
+      "newBlock": "Block time"
     },
     "login": {
       "title": "Welcome back",
