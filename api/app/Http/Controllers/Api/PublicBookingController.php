@@ -99,6 +99,35 @@ class PublicBookingController extends Controller
         ]);
     }
 
+    /**
+     * Embeddable "Book Now" widget (E10-2): a copy-paste snippet the salon adds
+     * to its own site. Also returns the booking URL + a QR target (E10-3) which
+     * the client renders as a QR image.
+     */
+    public function widget(Salon $salon): JsonResponse
+    {
+        $this->pin($salon);
+
+        $base = rtrim(config('app.frontend_url', config('app.url')), '/');
+        $bookingUrl = "{$base}/book/{$salon->slug}";
+        $color = $salon->brand_color ?: '#1E5C4A';
+
+        $snippet = <<<HTML
+        <a href="{$bookingUrl}" target="_blank" rel="noopener"
+           style="display:inline-block;padding:12px 20px;border-radius:9999px;
+                  background:{$color};color:#fff;font-family:system-ui,sans-serif;
+                  font-weight:600;text-decoration:none">احجز الآن · Book Now</a>
+        HTML;
+
+        return response()->json([
+            'data' => [
+                'booking_url' => $bookingUrl,
+                'qr_target' => $bookingUrl, // client renders this as a QR image
+                'embed_html' => $snippet,
+            ],
+        ]);
+    }
+
     /** Send a verification code to the customer's phone (E6-2). */
     public function requestOtp(Request $request, Salon $salon): JsonResponse
     {
