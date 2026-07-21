@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class BranchController extends Controller
 {
@@ -44,6 +46,25 @@ class BranchController extends Controller
         $branch->delete();
 
         return response()->json(['message' => 'Branch deleted.']);
+    }
+
+    /** Set which staff work at this branch (needed for availability). */
+    public function syncStaff(Request $request, Branch $branch): JsonResponse
+    {
+        $salonId = Tenancy::id();
+
+        $data = $request->validate([
+            'staff_ids' => ['present', 'array'],
+            'staff_ids.*' => [
+                'integer',
+                Rule::exists('users', 'id')->where(fn ($q) =>
+                    $q->where('salon_id', $salonId)->where('role', 'staff')),
+            ],
+        ]);
+
+        $branch->staff()->sync($data['staff_ids']);
+
+        return response()->json(['data' => $branch->load('staff:id,name,title')]);
     }
 
     /** @return array<string, mixed> */

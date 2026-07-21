@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\SalonAdminController;
+use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\OtpController;
@@ -28,11 +29,20 @@ Route::post('/auth/otp/verify', [OtpController::class, 'verify']);
 | Public booking (hosted salon page — book.app/{slug})
 |--------------------------------------------------------------------------
 */
+// Manage an existing booking by opaque token (cancel / reschedule link).
+Route::prefix('book/manage/{token}')->group(function () {
+    Route::get('/', [PublicBookingController::class, 'manageShow']);
+    Route::post('/cancel', [PublicBookingController::class, 'cancel']);
+    Route::post('/reschedule', [PublicBookingController::class, 'reschedule']);
+});
+
 Route::prefix('book/{salon:slug}')->group(function () {
     Route::get('/', [PublicBookingController::class, 'salon']);
     Route::get('/branches', [PublicBookingController::class, 'branches']);
     Route::get('/services', [PublicBookingController::class, 'services']);
     Route::get('/availability', [PublicBookingController::class, 'availability']);
+    Route::post('/otp', [PublicBookingController::class, 'requestOtp']);
+    Route::post('/appointments', [PublicBookingController::class, 'confirm']);
 });
 
 /*
@@ -58,6 +68,12 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/time-off', [TimeOffController::class, 'store']);
     Route::delete('/time-off/{timeOff}', [TimeOffController::class, 'destroy']);
 
+    // Appointments — calendar, walk-ins, status (owner sees all; staff see own).
+    Route::get('/appointments', [AppointmentController::class, 'index']);
+    Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
+    Route::post('/appointments', [AppointmentController::class, 'store']);
+    Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus']);
+
     // Catalog & configuration management — owner only.
     Route::middleware('role:owner')->group(function () {
         // Staff
@@ -69,6 +85,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/branches', [BranchController::class, 'store']);
         Route::patch('/branches/{branch}', [BranchController::class, 'update']);
         Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+        Route::put('/branches/{branch}/staff', [BranchController::class, 'syncStaff']);
         Route::put('/branches/{branch}/hours', [WorkingHourController::class, 'sync']);
 
         // Service categories
