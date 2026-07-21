@@ -211,6 +211,8 @@
       "currentPlan": "الباقة الحالية",
       "onTrial": "تجربة مجانية",
       "trialEnds": "تنتهي التجربة {date}",
+      "renews": "يتجدد {date}",
+      "endsOn": "متاح حتى {date}",
       "choosePlan": "اختر باقة",
       "subscribe": "اشترك",
       "subscribed": "تم تفعيل الاشتراك.",

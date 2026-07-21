@@ -39,7 +39,8 @@ export default function BillingPage() {
   const date = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
-  const activeKey = status.data.subscription?.status === "active" ? status.data.subscription.plan : null;
+  const sub = status.data.subscription;
+  const activeKey = sub?.status === "active" ? sub.plan : null;
 
   async function subscribe(key: string) {
     setBusy(key);
@@ -78,9 +79,15 @@ export default function BillingPage() {
             {activeKey ?? (status.data.on_trial ? t("onTrial") : status.data.plan)}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {status.data.on_trial && status.data.trial_ends_at && (
             <Badge tone="gold">{t("trialEnds", { date: date(status.data.trial_ends_at) })}</Badge>
+          )}
+          {sub?.status === "active" && sub.current_period_end && (
+            <Badge tone="accent">{t("renews", { date: date(sub.current_period_end) })}</Badge>
+          )}
+          {sub?.status === "canceled" && sub.current_period_end && (
+            <Badge tone="muted">{t("endsOn", { date: date(sub.current_period_end) })}</Badge>
           )}
           {activeKey && (
             <Button variant="danger" disabled={busy === "__cancel"} onClick={cancel}>

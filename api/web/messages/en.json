@@ -211,6 +211,8 @@
       "currentPlan": "Current plan",
       "onTrial": "Free trial",
       "trialEnds": "Trial ends {date}",
+      "renews": "Renews {date}",
+      "endsOn": "Access until {date}",
       "choosePlan": "Choose a plan",
       "subscribe": "Subscribe",
       "subscribed": "Subscription active.",
