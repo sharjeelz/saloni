@@ -205,4 +205,60 @@ class BookingFlowTest extends TestCase
         Sanctum::actingAs($this->staff); // has no appointments of their own
         $this->getJson('/api/appointments')->assertOk()->assertJsonCount(0, 'data');
     }
+
+    // ---- QA hardening (Sprints 3-4 review) ------------------------------------
+
+    public function test_cannot_book_outside_working_hours(): void
+    {
+        // Branch is open 10:00–18:00; 23:00 is not a real slot (BUG-2).
+        Sanctum::actingAs($this->owner);
+        $this->postJson('/api/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'customer_name' => 'Late', 'customer_phone' => '+966512345678',
+            'date' => $this->date->format('Y-m-d'), 'time' => '23:00',
+        ])->assertStatus(409);
+
+        $this->assertDatabaseCount('appointments', 0);
+    }
+
+    public function test_reschedule_preserves_the_manage_token(): void
+    {
+        $phone = '+966500000123';
+        $ref = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.reference');
+
+        // Reschedule to 13:00 — same token comes back (BUG-3).
+        $this->postJson("/api/book/manage/{$ref}/reschedule", [
+            'date' => $this->date->format('Y-m-d'), 'time' => '13:00',
+        ])->assertOk()->assertJsonPath('data.reference', $ref);
+
+        // The original manage link still resolves to the live (confirmed) booking.
+        $this->getJson("/api/book/manage/{$ref}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'confirmed');
+        $this->assertDatabaseCount('appointments', 1);
+    }
+
+    public function test_staff_cannot_change_a_colleagues_appointment(): void
+    {
+        // Appointment belongs to $this->staff.
+        Tenancy::set($this->salon);
+        $other = User::factory()->create(['salon_id' => $this->salon->id, 'role' => 'staff']);
+        $customer = Customer::create(['salon_id' => $this->salon->id, 'name' => 'X', 'phone' => '+966599990000']);
+        $appt = Appointment::create([
+            'salon_id' => $this->salon->id, 'branch_id' => $this->branch->id, 'customer_id' => $customer->id,
+            'service_id' => $this->service->id, 'staff_id' => $this->staff->id,
+            'starts_at' => Carbon::parse($this->date->format('Y-m-d') . ' 11:00', $this->tz)->utc(),
+            'ends_at' => Carbon::parse($this->date->format('Y-m-d') . ' 12:00', $this->tz)->utc(),
+            'status' => 'confirmed', 'source' => 'online',
+        ]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($other); // a different staff member
+        $this->patchJson("/api/appointments/{$appt->id}/status", ['status' => 'done'])->assertNotFound();
+        $this->getJson("/api/appointments/{$appt->id}")->assertNotFound();
+    }
 }

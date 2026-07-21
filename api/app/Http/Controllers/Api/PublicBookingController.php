@@ -201,22 +201,16 @@ class PublicBookingController extends Controller
             'time' => ['required', 'date_format:H:i'],
         ]);
 
-        $branch = Branch::findOrFail($appointment->branch_id);
-        $service = Service::findOrFail($appointment->service_id);
-        $staff = User::findOrFail($appointment->staff_id);
-
-        // Free the old slot, then attempt the new one; roll back if it's taken.
-        $appointment->update(['status' => 'cancelled']);
+        // Move in place — keeps the same manage link / reference (BUG-3 fix).
         try {
-            $new = $this->booking->book($branch, $service, $staff, $appointment->customer, $data['date'], $data['time']);
+            $this->booking->reschedule($appointment, $data['date'], $data['time']);
         } catch (SlotUnavailableException $e) {
-            $appointment->update(['status' => 'confirmed']); // restore
             return response()->json(['message' => $e->getMessage()], 409);
         }
 
         return response()->json([
             'message' => 'Booking rescheduled.',
-            'data' => ['reference' => $new->public_token, 'starts_at' => $new->starts_at],
+            'data' => ['reference' => $appointment->public_token, 'starts_at' => $appointment->starts_at],
         ]);
     }
 
