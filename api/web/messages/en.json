@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "title": "Salon — Booking & Management",
+    "description": "Book appointments and manage your salon across branches."
+  },
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "signIn": "Sign in",
+    "getStarted": "Get started"
+  },
+  "home": {
+    "kicker": "Salon SaaS · Kingdom of Saudi Arabia",
+    "title": "Run your salon. Fill every chair.",
+    "subtitle": "Online booking, staff scheduling, and appointment management — built for salons across the Kingdom, in Arabic and English.",
+    "ctaPrimary": "Start free trial",
+    "ctaSecondary": "See how it works",
+    "trial": "14-day free trial · No card required",
+    "features": {
+      "booking": {
+        "title": "Online booking",
+        "body": "A booking page for each salon — customers pick a service, staff, and time."
+      },
+      "branches": {
+        "title": "Multi-branch",
+        "body": "One account, many branches. Services, staff, and hours per location."
+      },
+      "reminders": {
+        "title": "SMS reminders",
+        "body": "Confirmations and reminders by SMS to cut no-shows."
+      }
+    }
+  },
+  "common": {
+    "language": "Language",
+    "arabic": "العربية",
+    "english": "English"
+  }
+}

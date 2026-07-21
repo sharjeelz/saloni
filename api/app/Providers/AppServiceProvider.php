@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Services\Sms\ConfigSmsSender;
 use App\Services\Sms\LogSmsSender;
 use App\Services\Sms\SmsSender;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -38,6 +40,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Super-admin bypasses every gate.
+        Gate::before(fn (User $user) => $user->isSuperAdmin() ? true : null);
+
+        // Owner-only abilities (managing the salon's setup & people).
+        foreach (['manage-salon', 'manage-branches', 'manage-services', 'manage-staff', 'manage-billing'] as $ability) {
+            Gate::define($ability, fn (User $user) => $user->isOwner());
+        }
+
+        // Both owners and staff can work with appointments/customers.
+        Gate::define('manage-appointments', fn (User $user) => $user->isOwner() || $user->isStaff());
     }
 }
