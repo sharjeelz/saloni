@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\SalonAdminController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OtpController;
 use App\Http\Controllers\Api\PublicBookingController;
 use App\Http\Controllers\Api\SalonSettingsController;
@@ -76,6 +77,9 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Catalog & configuration management — owner only.
     Route::middleware('role:owner')->group(function () {
+        // Owner dashboard — bookings & revenue.
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+
         // Staff
         Route::get('/staff', [StaffController::class, 'index']);
         Route::post('/staff/invite', [StaffController::class, 'invite']);

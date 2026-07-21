@@ -14,7 +14,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'public_token', 'salon_id', 'branch_id', 'customer_id', 'service_id', 'staff_id',
-        'starts_at', 'ends_at', 'status', 'source', 'price', 'notes', 'cancelled_at',
+        'starts_at', 'ends_at', 'status', 'source', 'price', 'notes', 'cancelled_at', 'reminder_sent_at',
     ];
 
     protected function casts(): array
@@ -23,6 +23,7 @@ class Appointment extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
             'price' => 'decimal:2',
         ];
     }
