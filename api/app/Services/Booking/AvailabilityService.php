@@ -25,9 +25,11 @@ class AvailabilityService
     public const SLOT_STEP_MINUTES = 15;
 
     /**
+     * @param  int|null  $ignoreAppointmentId  exclude this appointment when checking
+     *                                          conflicts (used when rescheduling it)
      * @return array<int, array{time: string, staff: array<int, array{id:int, name:string}>}>
      */
-    public function slots(Branch $branch, Service $service, ?int $staffId, string $date): array
+    public function slots(Branch $branch, Service $service, ?int $staffId, string $date, ?int $ignoreAppointmentId = null): array
     {
         $tz = $branch->salon->timezone ?? 'Asia/Riyadh';
         $day = Carbon::createFromFormat('Y-m-d', $date, $tz)->startOfDay();
@@ -55,7 +57,7 @@ class AvailabilityService
             $busy = array_merge(
                 $branchClosures,
                 $this->timeOffIntervals($branch->id, $member->id, $day, $tz),
-                $this->appointmentIntervals($member->id, $day, $tz),
+                $this->appointmentIntervals($member->id, $day, $tz, $ignoreAppointmentId),
             );
 
             foreach ($windows as [$wStart, $wEnd]) {
@@ -140,13 +142,14 @@ class AvailabilityService
     }
 
     /** Existing (non-cancelled) appointments for a staff member on the day. */
-    protected function appointmentIntervals(int $staffId, Carbon $day, string $tz): array
+    protected function appointmentIntervals(int $staffId, Carbon $day, string $tz, ?int $ignoreId = null): array
     {
         $dayStart = $day->copy()->startOfDay();
         $dayEnd = $day->copy()->endOfDay();
 
         return Appointment::where('staff_id', $staffId)
             ->where('status', '!=', 'cancelled')
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
             ->where('starts_at', '<', $dayEnd)
             ->where('ends_at', '>', $dayStart)
             ->get()

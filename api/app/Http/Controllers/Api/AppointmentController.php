@@ -44,8 +44,10 @@ class AppointmentController extends Controller
         return response()->json(['data' => $appointments]);
     }
 
-    public function show(Appointment $appointment): JsonResponse
+    public function show(Request $request, Appointment $appointment): JsonResponse
     {
+        $this->authorizeAppointment($request, $appointment);
+
         return response()->json([
             'data' => $appointment->load(['customer', 'service:id,name,duration_min,price', 'staff:id,name', 'branch:id,name']),
         ]);
@@ -89,6 +91,8 @@ class AppointmentController extends Controller
     /** Mark done / no-show / cancelled / confirmed (E7-3). */
     public function updateStatus(Request $request, Appointment $appointment): JsonResponse
     {
+        $this->authorizeAppointment($request, $appointment);
+
         $data = $request->validate([
             'status' => ['required', Rule::in(Appointment::STATUSES)],
         ]);
@@ -103,5 +107,14 @@ class AppointmentController extends Controller
         $appointment->save();
 
         return response()->json(['data' => $appointment]);
+    }
+
+    /** Staff may only touch their own appointments (owners: any in the salon). */
+    protected function authorizeAppointment(Request $request, Appointment $appointment): void
+    {
+        $user = $request->user();
+        if ($user->isStaff() && $appointment->staff_id !== $user->id) {
+            abort(404);
+        }
     }
 }

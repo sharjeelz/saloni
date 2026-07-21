@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Billing\ManualPaymentGateway;
+use App\Services\Billing\MoyasarPaymentGateway;
+use App\Services\Billing\PaymentGateway;
 use App\Services\Sms\ConfigSmsSender;
 use App\Services\Sms\LogSmsSender;
 use App\Services\Sms\SmsSender;
@@ -32,6 +35,18 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new ConfigSmsSender($gateway, (string) ($config['country_code'] ?? '966'));
+        });
+
+        $this->app->singleton(PaymentGateway::class, function ($app) {
+            $config = $app['config']['payments'];
+
+            return match ($config['gateway']) {
+                'moyasar' => new MoyasarPaymentGateway(
+                    $config['moyasar']['secret_key'],
+                    $config['moyasar']['base_url'],
+                ),
+                default => new ManualPaymentGateway(),
+            };
         });
     }
 

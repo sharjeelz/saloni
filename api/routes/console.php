@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Send appointment reminders (E8-2). Runs often; each booking reminded once.
 Schedule::command('appointments:send-reminders')->everyFifteenMinutes()->withoutOverlapping();
+
+// Charge & extend subscriptions whose period has ended (E9-2).
+Schedule::command('subscriptions:renew')->dailyAt('02:00')->withoutOverlapping();

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\SalonAdminController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OtpController;
@@ -39,6 +40,7 @@ Route::prefix('book/manage/{token}')->group(function () {
 
 Route::prefix('book/{salon:slug}')->group(function () {
     Route::get('/', [PublicBookingController::class, 'salon']);
+    Route::get('/widget', [PublicBookingController::class, 'widget']);
     Route::get('/branches', [PublicBookingController::class, 'branches']);
     Route::get('/services', [PublicBookingController::class, 'services']);
     Route::get('/availability', [PublicBookingController::class, 'availability']);
@@ -79,6 +81,14 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::middleware('role:owner')->group(function () {
         // Owner dashboard — bookings & revenue.
         Route::get('/dashboard', [DashboardController::class, 'index']);
+
+        // Billing & subscriptions.
+        Route::get('/billing', [BillingController::class, 'show']);
+        Route::get('/billing/plans', [BillingController::class, 'plans']);
+        Route::post('/billing/subscribe', [BillingController::class, 'subscribe']);
+        Route::post('/billing/cancel', [BillingController::class, 'cancel']);
+        Route::get('/billing/invoices', [BillingController::class, 'invoices']);
+        Route::get('/billing/invoices/{invoice}', [BillingController::class, 'invoice']);
 
         // Staff
         Route::get('/staff', [StaffController::class, 'index']);
