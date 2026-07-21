@@ -121,4 +121,32 @@ class CatalogTest extends TestCase
         $this->getJson("/api/branches/{$foreignBranch->id}")->assertNotFound();
         $this->patchJson("/api/branches/{$foreignBranch->id}", ['name' => 'Hacked'])->assertNotFound();
     }
+
+    public function test_owner_assigns_staff_to_a_branch(): void
+    {
+        [$salon, $owner, $staff] = $this->salon();
+        Tenancy::set($salon);
+        $branch = Branch::create(['name' => 'Olaya', 'salon_id' => $salon->id]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/branches/{$branch->id}/staff", ['staff_ids' => [$staff->id]])
+            ->assertOk()
+            ->assertJsonPath('data.staff.0.id', $staff->id);
+
+        $this->assertDatabaseHas('branch_staff', ['branch_id' => $branch->id, 'user_id' => $staff->id]);
+    }
+
+    public function test_branch_staff_rejects_foreign_staff(): void
+    {
+        [$salonA, $ownerA] = $this->salon('glow');
+        [$salonB, , $staffB] = $this->salon('lush');
+        Tenancy::set($salonA);
+        $branchA = Branch::create(['name' => 'A', 'salon_id' => $salonA->id]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($ownerA);
+        $this->putJson("/api/branches/{$branchA->id}/staff", ['staff_ids' => [$staffB->id]])
+            ->assertStatus(422);
+    }
 }

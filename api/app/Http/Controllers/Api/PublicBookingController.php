@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\SlotUnavailableException;
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
 use App\Models\Branch;
 use App\Models\Salon;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\Booking\AvailabilityService;
+use App\Services\Booking\BookingService;
+use App\Services\Otp\OtpService;
+use App\Services\Sms\SmsSender;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Public, unauthenticated booking surface for a salon's hosted page
@@ -18,7 +25,12 @@ use Illuminate\Http\Request;
  */
 class PublicBookingController extends Controller
 {
-    public function __construct(protected AvailabilityService $availability) {}
+    public function __construct(
+        protected AvailabilityService $availability,
+        protected BookingService $booking,
+        protected OtpService $otp,
+        protected SmsSender $sms,
+    ) {}
 
     /** Salon header/branding for the booking page. */
     public function salon(Salon $salon): JsonResponse
@@ -85,6 +97,148 @@ class PublicBookingController extends Controller
             ],
             'data' => $slots,
         ]);
+    }
+
+    /** Send a verification code to the customer's phone (E6-2). */
+    public function requestOtp(Request $request, Salon $salon): JsonResponse
+    {
+        $this->pin($salon);
+        $data = $request->validate(['phone' => ['required', 'string', 'max:20']]);
+
+        $result = $this->otp->request('phone', $data['phone']);
+        if ($result['throttled'] ?? false) {
+            return response()->json(['message' => 'A code was just sent. Please wait a moment.'], 429);
+        }
+
+        return response()->json(array_filter([
+            'message' => 'Verification code sent.',
+            'debug_code' => $result['debug_code'] ?? null, // null in production
+        ], fn ($v) => $v !== null));
+    }
+
+    /**
+     * Confirm a booking: verify the phone OTP, create the customer + appointment,
+     * and text a confirmation (E6-2 / E6-3).
+     */
+    public function confirm(Request $request, Salon $salon): JsonResponse
+    {
+        $this->pin($salon);
+
+        $data = $request->validate([
+            'branch_id' => ['required', 'integer'],
+            'service_id' => ['required', 'integer'],
+            'staff_id' => ['required', 'integer'],
+            'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'time' => ['required', 'date_format:H:i'],
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:20'],
+            'code' => ['required', 'string', 'size:6'],
+        ]);
+
+        if (! $this->otp->verify('phone', $data['phone'], $data['code'])) {
+            return response()->json(['message' => 'Invalid or expired code.'], 422);
+        }
+
+        // Scoped lookups — foreign / inactive ids 404.
+        $branch = Branch::where('is_active', true)->findOrFail($data['branch_id']);
+        $service = Service::where('is_active', true)->findOrFail($data['service_id']);
+        $staff = User::where('role', 'staff')->where('is_active', true)->findOrFail($data['staff_id']);
+
+        $customer = $this->booking->resolveCustomer($data['name'], $data['phone']);
+
+        try {
+            $appointment = $this->booking->book(
+                $branch, $service, $staff, $customer, $data['date'], $data['time'], source: 'online',
+            );
+        } catch (SlotUnavailableException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+
+        $this->sendConfirmation($salon, $appointment, $service, $staff, $data['phone']);
+
+        return response()->json([
+            'message' => 'Booking confirmed.',
+            'data' => [
+                'reference' => $appointment->public_token,
+                'starts_at' => $appointment->starts_at,
+                'service' => $service->name,
+                'staff' => $staff->name,
+            ],
+        ], 201);
+    }
+
+    /** View a booking from its manage link (E6-4). */
+    public function manageShow(string $token): JsonResponse
+    {
+        $appointment = $this->resolveByToken($token);
+
+        return response()->json([
+            'data' => $appointment->load('service:id,name,duration_min', 'staff:id,name', 'branch:id,name,address'),
+        ]);
+    }
+
+    /** Cancel from the manage link (E6-4). */
+    public function cancel(string $token): JsonResponse
+    {
+        $appointment = $this->resolveByToken($token);
+
+        abort_if(in_array($appointment->status, ['cancelled', 'done'], true), 422, 'This booking can no longer be cancelled.');
+
+        $appointment->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+
+        return response()->json(['message' => 'Booking cancelled.']);
+    }
+
+    /** Reschedule to a new free slot from the manage link (E6-4). */
+    public function reschedule(Request $request, string $token): JsonResponse
+    {
+        $appointment = $this->resolveByToken($token);
+        abort_if(in_array($appointment->status, ['cancelled', 'done'], true), 422, 'This booking can no longer be changed.');
+
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'time' => ['required', 'date_format:H:i'],
+        ]);
+
+        $branch = Branch::findOrFail($appointment->branch_id);
+        $service = Service::findOrFail($appointment->service_id);
+        $staff = User::findOrFail($appointment->staff_id);
+
+        // Free the old slot, then attempt the new one; roll back if it's taken.
+        $appointment->update(['status' => 'cancelled']);
+        try {
+            $new = $this->booking->book($branch, $service, $staff, $appointment->customer, $data['date'], $data['time']);
+        } catch (SlotUnavailableException $e) {
+            $appointment->update(['status' => 'confirmed']); // restore
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+
+        return response()->json([
+            'message' => 'Booking rescheduled.',
+            'data' => ['reference' => $new->public_token, 'starts_at' => $new->starts_at],
+        ]);
+    }
+
+    protected function sendConfirmation(Salon $salon, Appointment $appointment, Service $service, User $staff, string $phone): void
+    {
+        $tz = $salon->timezone ?? 'Asia/Riyadh';
+        $when = $appointment->starts_at->copy()->setTimezone($tz)->format('D d M · H:i');
+        $this->sms->send(
+            $phone,
+            "{$salon->name}: your {$service->name} with {$staff->name} is confirmed for {$when}. Ref {$appointment->public_token}.",
+        );
+    }
+
+    /** Resolve an appointment by its public token, pinning its salon as tenant. */
+    protected function resolveByToken(string $token): Appointment
+    {
+        $appointment = Appointment::withoutGlobalScope('salon')
+            ->where('public_token', $token)
+            ->firstOrFail();
+
+        Tenancy::set($appointment->salon_id);
+
+        return $appointment;
     }
 
     /** Resolve + pin the tenant; 404 for inactive/unknown salons. */
