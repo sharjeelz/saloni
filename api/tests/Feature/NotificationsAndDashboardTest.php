@@ -1,0 +1,161 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Appointment;
+use App\Models\Branch;
+use App\Models\Customer;
+use App\Models\Salon;
+use App\Models\Service;
+use App\Models\User;
+use App\Models\WorkingHour;
+use App\Services\Sms\SmsSender;
+use App\Support\Tenancy;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class NotificationsAndDashboardTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected string $tz = 'Asia/Riyadh';
+    /** @var array<int, array{to:string, message:string}> */
+    protected object $sms;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Capture every SMS the app sends.
+        $this->sms = new class implements SmsSender {
+            public array $sent = [];
+
+            public function send(string $to, string $message): bool
+            {
+                $this->sent[] = ['to' => $to, 'message' => $message];
+
+                return true;
+            }
+        };
+        $this->app->instance(SmsSender::class, $this->sms);
+    }
+
+    protected function makeSalon(): array
+    {
+        $salon = Salon::create(['name' => 'Glow', 'slug' => 'glow', 'timezone' => $this->tz]);
+        Tenancy::set($salon);
+        $owner = User::factory()->create(['salon_id' => $salon->id, 'role' => 'owner', 'phone' => '+966500000001']);
+        $staff = User::factory()->create(['salon_id' => $salon->id, 'role' => 'staff', 'name' => 'Lina']);
+        $branch = Branch::create(['name' => 'Olaya', 'salon_id' => $salon->id]);
+        $service = Service::create(['salon_id' => $salon->id, 'name' => 'Haircut', 'duration_min' => 60, 'price' => 100]);
+        $branch->staff()->attach($staff->id);
+        $service->staff()->attach($staff->id);
+        $date = Carbon::today($this->tz)->addDays(3);
+        WorkingHour::create([
+            'salon_id' => $salon->id, 'branch_id' => $branch->id, 'user_id' => null,
+            'weekday' => (int) $date->dayOfWeek, 'start_time' => '09:00', 'end_time' => '21:00',
+        ]);
+        Tenancy::clear();
+
+        return compact('salon', 'owner', 'staff', 'branch', 'service', 'date');
+    }
+
+    protected function appointment(array $ctx, string $status, Carbon $start, ?Carbon $reminderSent = null): Appointment
+    {
+        Tenancy::set($ctx['salon']);
+        $customer = Customer::create(['salon_id' => $ctx['salon']->id, 'name' => 'Sara', 'phone' => '+966555000' . rand(100, 999)]);
+        $appt = Appointment::create([
+            'salon_id' => $ctx['salon']->id, 'branch_id' => $ctx['branch']->id, 'customer_id' => $customer->id,
+            'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
+            'starts_at' => $start->clone()->utc(), 'ends_at' => $start->clone()->addMinutes(60)->utc(),
+            'status' => $status, 'source' => 'online', 'price' => 100, 'reminder_sent_at' => $reminderSent,
+        ]);
+        Tenancy::clear();
+
+        return $appt;
+    }
+
+    // ---- E8-2: reminders ------------------------------------------------------
+
+    public function test_reminder_command_texts_due_appointments_once(): void
+    {
+        $ctx = $this->makeSalon();
+        // Due: starts in 1 hour (within the 120-min lead).
+        $due = $this->appointment($ctx, 'confirmed', now()->addHour());
+        // Not due: starts in 5 hours.
+        $far = $this->appointment($ctx, 'confirmed', now()->addHours(5));
+
+        $this->artisan('appointments:send-reminders')->assertSuccessful();
+
+        $this->assertNotNull($due->fresh()->reminder_sent_at);
+        $this->assertNull($far->fresh()->reminder_sent_at);
+        $reminders = array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'Reminder'));
+        $this->assertCount(1, $reminders);
+
+        // Running again does not re-send.
+        $this->sms->sent = [];
+        $this->artisan('appointments:send-reminders')->assertSuccessful();
+        $this->assertCount(0, array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'Reminder')));
+    }
+
+    public function test_cancelled_appointments_get_no_reminder(): void
+    {
+        $ctx = $this->makeSalon();
+        $cancelled = $this->appointment($ctx, 'cancelled', now()->addHour());
+
+        $this->artisan('appointments:send-reminders')->assertSuccessful();
+
+        $this->assertNull($cancelled->fresh()->reminder_sent_at);
+    }
+
+    // ---- E8-3: owner notified on new booking ----------------------------------
+
+    public function test_owner_is_notified_on_a_new_online_booking(): void
+    {
+        $ctx = $this->makeSalon();
+        $phone = '+966501234567';
+        $code = $this->postJson('/api/book/glow/otp', ['phone' => $phone])->json('debug_code');
+
+        $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $ctx['branch']->id, 'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
+            'date' => $ctx['date']->format('Y-m-d'), 'time' => '10:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $code,
+        ])->assertCreated();
+
+        $toOwner = array_filter($this->sms->sent, fn ($m) => $m['to'] === '+966500000001' && str_contains($m['message'], 'New booking'));
+        $this->assertCount(1, $toOwner);
+        // Customer also got their confirmation.
+        $this->assertNotEmpty(array_filter($this->sms->sent, fn ($m) => $m['to'] === $phone));
+    }
+
+    // ---- E11: dashboard -------------------------------------------------------
+
+    public function test_dashboard_reports_todays_bookings_and_revenue(): void
+    {
+        $ctx = $this->makeSalon();
+        $today = Carbon::today($this->tz)->setTime(12, 0);
+        $this->appointment($ctx, 'done', $today);            // collected revenue 100
+        $this->appointment($ctx, 'confirmed', $today->clone()->addHours(2)); // expected only
+        $this->appointment($ctx, 'cancelled', $today->clone()->addHours(3)); // neither
+
+        Sanctum::actingAs($ctx['owner']);
+        $res = $this->getJson('/api/dashboard')->assertOk();
+
+        $res->assertJsonPath('totals.bookings', 3)
+            ->assertJsonPath('totals.by_status.done', 1)
+            ->assertJsonPath('totals.by_status.cancelled', 1)
+            ->assertJsonPath('revenue.collected', 100)
+            ->assertJsonPath('revenue.expected', 200);
+
+        $this->assertSame('Lina', $res->json('by_staff.0.staff'));
+        $this->assertSame(3, $res->json('by_staff.0.bookings'));
+    }
+
+    public function test_dashboard_is_owner_only(): void
+    {
+        $ctx = $this->makeSalon();
+        Sanctum::actingAs($ctx['staff']);
+        $this->getJson('/api/dashboard')->assertForbidden();
+    }
+}

@@ -10,9 +10,9 @@ use App\Models\Salon;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Booking\AvailabilityService;
+use App\Services\Booking\BookingNotifier;
 use App\Services\Booking\BookingService;
 use App\Services\Otp\OtpService;
-use App\Services\Sms\SmsSender;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ class PublicBookingController extends Controller
         protected AvailabilityService $availability,
         protected BookingService $booking,
         protected OtpService $otp,
-        protected SmsSender $sms,
+        protected BookingNotifier $notifier,
     ) {}
 
     /** Salon header/branding for the booking page. */
@@ -154,7 +154,8 @@ class PublicBookingController extends Controller
             return response()->json(['message' => $e->getMessage()], 409);
         }
 
-        $this->sendConfirmation($salon, $appointment, $service, $staff, $data['phone']);
+        $this->notifier->confirmation($appointment);
+        $this->notifier->notifyOwners($appointment); // E8-3
 
         return response()->json([
             'message' => 'Booking confirmed.',
@@ -217,16 +218,6 @@ class PublicBookingController extends Controller
             'message' => 'Booking rescheduled.',
             'data' => ['reference' => $new->public_token, 'starts_at' => $new->starts_at],
         ]);
-    }
-
-    protected function sendConfirmation(Salon $salon, Appointment $appointment, Service $service, User $staff, string $phone): void
-    {
-        $tz = $salon->timezone ?? 'Asia/Riyadh';
-        $when = $appointment->starts_at->copy()->setTimezone($tz)->format('D d M · H:i');
-        $this->sms->send(
-            $phone,
-            "{$salon->name}: your {$service->name} with {$staff->name} is confirmed for {$when}. Ref {$appointment->public_token}.",
-        );
     }
 
     /** Resolve an appointment by its public token, pinning its salon as tenant. */
