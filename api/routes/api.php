@@ -4,10 +4,12 @@ use App\Http\Controllers\Api\Admin\SalonAdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\OtpController;
+use App\Http\Controllers\Api\PublicBookingController;
 use App\Http\Controllers\Api\SalonSettingsController;
 use App\Http\Controllers\Api\ServiceCategoryController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\TimeOffController;
 use App\Http\Controllers\Api\WorkingHourController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +22,18 @@ Route::post('/auth/signup', [AuthController::class, 'signup']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/otp/request', [OtpController::class, 'request']);
 Route::post('/auth/otp/verify', [OtpController::class, 'verify']);
+
+/*
+|--------------------------------------------------------------------------
+| Public booking (hosted salon page — book.app/{slug})
+|--------------------------------------------------------------------------
+*/
+Route::prefix('book/{salon:slug}')->group(function () {
+    Route::get('/', [PublicBookingController::class, 'salon']);
+    Route::get('/branches', [PublicBookingController::class, 'branches']);
+    Route::get('/services', [PublicBookingController::class, 'services']);
+    Route::get('/availability', [PublicBookingController::class, 'availability']);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +52,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/services', [ServiceController::class, 'index']);
     Route::get('/services/{service}', [ServiceController::class, 'show']);
     Route::get('/salon', [SalonSettingsController::class, 'show']);
+
+    // Time off — staff manage their own; owners manage anyone's + closures.
+    Route::get('/time-off', [TimeOffController::class, 'index']);
+    Route::post('/time-off', [TimeOffController::class, 'store']);
+    Route::delete('/time-off/{timeOff}', [TimeOffController::class, 'destroy']);
 
     // Catalog & configuration management — owner only.
     Route::middleware('role:owner')->group(function () {
