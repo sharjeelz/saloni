@@ -189,7 +189,8 @@ class PublicBookingController extends Controller
         return response()->json([
             'message' => 'Booking confirmed.',
             'data' => [
-                'reference' => $appointment->public_token,
+                'reference' => $appointment->reference,       // short, human
+                'manage_token' => $appointment->public_token, // for the manage link
                 'starts_at' => $appointment->starts_at,
                 'service' => $service->name,
                 'staff' => $staff->name,
@@ -239,7 +240,11 @@ class PublicBookingController extends Controller
 
         return response()->json([
             'message' => 'Booking rescheduled.',
-            'data' => ['reference' => $appointment->public_token, 'starts_at' => $appointment->starts_at],
+            'data' => [
+                'reference' => $appointment->reference,
+                'manage_token' => $appointment->public_token,
+                'starts_at' => $appointment->starts_at,
+            ],
         ]);
     }
 

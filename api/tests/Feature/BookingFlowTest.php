@@ -143,7 +143,7 @@ class BookingFlowTest extends TestCase
             'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
             'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
             'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
-        ])->json('data.reference');
+        ])->json('data.manage_token');
 
         $this->getJson("/api/book/manage/{$ref}")->assertOk()->assertJsonPath('data.staff.name', 'Lina');
         $this->postJson("/api/book/manage/{$ref}/cancel")->assertOk();
@@ -228,12 +228,12 @@ class BookingFlowTest extends TestCase
             'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
             'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
             'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
-        ])->json('data.reference');
+        ])->json('data.manage_token');
 
-        // Reschedule to 13:00 — same token comes back (BUG-3).
+        // Reschedule to 13:00 — same manage token comes back (BUG-3).
         $this->postJson("/api/book/manage/{$ref}/reschedule", [
             'date' => $this->date->format('Y-m-d'), 'time' => '13:00',
-        ])->assertOk()->assertJsonPath('data.reference', $ref);
+        ])->assertOk()->assertJsonPath('data.manage_token', $ref);
 
         // The original manage link still resolves to the live (confirmed) booking.
         $this->getJson("/api/book/manage/{$ref}")
