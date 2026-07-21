@@ -57,6 +57,7 @@ export default async function LocaleLayout({
       lang={locale}
       dir={dir}
       className={`${display.variable} ${body.variable} ${mono.variable} h-full`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         {/* Stamp the theme before first paint to avoid a light/dark flash. */}
