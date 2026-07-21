@@ -13,7 +13,7 @@ class ServiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $services = Service::with('category:id,name')
+        $services = Service::with(['category:id,name', 'staff:id,name,title'])
             ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
             ->when($request->query('category'), fn ($q, $id) => $q->where('service_category_id', $id))
             ->orderBy('name')

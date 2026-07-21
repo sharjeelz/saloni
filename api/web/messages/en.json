@@ -100,7 +100,14 @@
       "categoryName": "Category name",
       "empty": "No services yet. Add what your salon offers.",
       "assignStaff": "Who performs this",
-      "min": "min"
+      "min": "min",
+      "manageCategories": "Categories",
+      "editCategory": "Edit category",
+      "noCategories": "No categories yet.",
+      "servicesCount": "{n} services",
+      "performedBy": "Performed by",
+      "noneYet": "Not set",
+      "noStaffYet": "No staff yet — invite your team first."
     },
     "staff": {
       "title": "Team",

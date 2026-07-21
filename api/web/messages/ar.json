@@ -100,7 +100,14 @@
       "categoryName": "اسم التصنيف",
       "empty": "لا خدمات بعد. أضِف ما يقدّمه صالونك.",
       "assignStaff": "من يقدّم الخدمة",
-      "min": "دقيقة"
+      "min": "دقيقة",
+      "manageCategories": "التصنيفات",
+      "editCategory": "تعديل التصنيف",
+      "noCategories": "لا تصنيفات بعد.",
+      "servicesCount": "{n} خدمة",
+      "performedBy": "يقدّمها",
+      "noneYet": "غير محدّد",
+      "noStaffYet": "لا موظفين بعد — ادعُ فريقك أولاً."
     },
     "staff": {
       "title": "الفريق",

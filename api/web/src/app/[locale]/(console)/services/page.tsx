@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { del, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
@@ -10,13 +11,14 @@ import {
   Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Select, Spinner,
 } from "@/components/ui/kit";
 
-type Category = { id: number; name: string };
+type Category = { id: number; name: string; services_count?: number };
+type StaffLite = { id: number; name: string; title: string | null };
 type Service = {
   id: number; name: string; duration_min: number; price: string;
   currency: string; is_active: boolean; service_category_id: number | null;
   category?: { id: number; name: string } | null;
+  staff?: StaffLite[];
 };
-type StaffLite = { id: number; name: string; title: string | null };
 
 export default function ServicesPage() {
   const t = useTranslations("app.services");
@@ -28,6 +30,7 @@ export default function ServicesPage() {
 
   const [editing, setEditing] = useState<Service | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editCat, setEditCat] = useState<Category | null>(null);
   const [addingCat, setAddingCat] = useState(false);
   const [staffFor, setStaffFor] = useState<Service | null>(null);
 
@@ -37,13 +40,45 @@ export default function ServicesPage() {
   const money = (p: string, cur: string) =>
     new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(Number(p));
 
+  const reloadCats = () => { categories.reload(); services.reload(); };
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("title")}>
-        <Button variant="ghost" onClick={() => setAddingCat(true)}>+ {t("addCategory")}</Button>
         <Button onClick={() => setCreating(true)}>+ {t("add")}</Button>
       </PageHeader>
 
+      {/* Categories management */}
+      <Card className="mb-6 p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
+            {t("manageCategories")}
+          </h2>
+          <Button variant="ghost" onClick={() => setAddingCat(true)}>+ {t("addCategory")}</Button>
+        </div>
+        {categories.data.data.length === 0 ? (
+          <p className="text-sm text-muted">{t("noCategories")}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-line">
+            {categories.data.data.map((cat) => (
+              <li key={cat.id} className="flex items-center gap-3 py-2.5">
+                <span className="font-medium text-ink">{cat.name}</span>
+                <span className="text-sm text-muted">
+                  {t("servicesCount", { n: cat.services_count ?? 0 })}
+                </span>
+                <button
+                  onClick={() => setEditCat(cat)}
+                  className="ms-auto text-sm font-medium text-muted hover:text-accent-ink"
+                >
+                  {c("edit")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* Services */}
       {services.data.data.length === 0 ? (
         <EmptyState message={t("empty")} action={<Button onClick={() => setCreating(true)}>+ {t("add")}</Button>} />
       ) : (
@@ -57,6 +92,12 @@ export default function ServicesPage() {
                 </div>
                 <p className="text-sm text-muted">
                   {s.duration_min} {t("min")} · {money(s.price, s.currency)}
+                </p>
+                <p className="mt-0.5 text-sm text-muted">
+                  {t("performedBy")}:{" "}
+                  <span className="text-ink">
+                    {s.staff && s.staff.length > 0 ? s.staff.map((m) => m.name).join("، ") : t("noneYet")}
+                  </span>
                 </p>
               </div>
               <Button variant="ghost" onClick={() => setStaffFor(s)}>{t("assignStaff")}</Button>
@@ -74,15 +115,17 @@ export default function ServicesPage() {
           onDeleted={() => { setEditing(null); services.reload(); notify(c("deleted")); }}
         />
       )}
-      {addingCat && (
+      {(addingCat || editCat) && (
         <CategoryForm
-          onClose={() => setAddingCat(false)}
-          onSaved={() => { setAddingCat(false); categories.reload(); notify(c("saved")); }}
+          category={editCat}
+          onClose={() => { setAddingCat(false); setEditCat(null); }}
+          onSaved={() => { setAddingCat(false); setEditCat(null); reloadCats(); notify(c("saved")); }}
+          onDeleted={() => { setEditCat(null); reloadCats(); notify(c("deleted")); }}
         />
       )}
       {staffFor && (
         <ServiceStaffModal service={staffFor} onClose={() => setStaffFor(null)}
-          onSaved={() => { setStaffFor(null); notify(c("saved")); }} />
+          onSaved={() => { setStaffFor(null); services.reload(); notify(c("saved")); }} />
       )}
     </div>
   );
@@ -158,25 +201,39 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
   );
 }
 
-function CategoryForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function CategoryForm({ category, onClose, onSaved, onDeleted }: {
+  category: Category | null; onClose: () => void; onSaved: () => void; onDeleted: () => void;
+}) {
   const t = useTranslations("app.services");
   const c = useTranslations("app.common");
   const { notify } = useToast();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(category?.name ?? "");
   const [busy, setBusy] = useState(false);
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    try { await post("/service-categories", { name }); onSaved(); }
-    catch { notify(c("error"), "error"); setBusy(false); }
+    try {
+      if (category) await patch(`/service-categories/${category.id}`, { name });
+      else await post("/service-categories", { name });
+      onSaved();
+    } catch { notify(c("error"), "error"); setBusy(false); }
   }
+  async function remove() {
+    if (!category || !confirm(c("confirmDelete"))) return;
+    try { await del(`/service-categories/${category.id}`); onDeleted(); } catch { notify(c("error"), "error"); }
+  }
+
   return (
-    <Modal open onClose={onClose} title={t("addCategory")}>
+    <Modal open onClose={onClose} title={category ? t("editCategory") : t("addCategory")}>
       <form onSubmit={save} className="flex flex-col gap-4">
         <Field label={t("categoryName")}><Input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>{c("cancel")}</Button>
-          <Button type="submit" disabled={busy}>{busy ? c("saving") : c("save")}</Button>
+        <div className="flex items-center justify-between gap-2">
+          {category ? <Button type="button" variant="danger" onClick={remove}>{c("delete")}</Button> : <span />}
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>{c("cancel")}</Button>
+            <Button type="submit" disabled={busy}>{busy ? c("saving") : c("save")}</Button>
+          </div>
         </div>
       </form>
     </Modal>
@@ -188,6 +245,7 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
 }) {
   const t = useTranslations("app.services");
   const c = useTranslations("app.common");
+  const nav = useTranslations("app.nav");
   const { notify } = useToast();
   const allStaff = useApi<{ data: StaffLite[] }>("/staff");
   const detail = useApi<{ data: { staff: StaffLite[] } }>(`/services/${service.id}`);
@@ -204,11 +262,19 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
   }
   const toggle = (id: number) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  const noStaff = allStaff.data && allStaff.data.data.length === 0;
+
   return (
     <Modal open onClose={onClose} title={`${t("assignStaff")} · ${service.name}`}>
-      {allStaff.loading || detail.loading || !selected ? <Spinner /> : (
+      {allStaff.loading || detail.loading || !selected ? <Spinner /> : noStaff ? (
+        <div className="py-4 text-center">
+          <p className="text-muted">{t("noStaffYet")}</p>
+          <Link href="/staff" className="mt-3 inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white">
+            {nav("staff")}
+          </Link>
+        </div>
+      ) : (
         <div className="flex flex-col gap-1.5">
-          {allStaff.data!.data.length === 0 && <p className="text-sm text-muted">—</p>}
           {allStaff.data!.data.map((s) => (
             <label key={s.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-2">
               <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} />
