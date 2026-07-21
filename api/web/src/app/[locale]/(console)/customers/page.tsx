@@ -174,7 +174,7 @@ function CustomerDrawer({ customer, onClose, onSaved }: {
             <ul className="divide-y divide-line">
               {data.history.map((h) => (
                 <li key={h.id} className="flex items-center gap-3 py-2.5">
-                  <span className="w-24 shrink-0 font-mono text-xs text-accent-ink tnum" dir="ltr">{when(h.starts_at)}</span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-xs text-accent-ink tnum" dir="ltr">{when(h.starts_at)}</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">{h.service?.name} · {h.staff?.name}</span>
                   <Badge tone={STATUS_TONE[h.status]}>{statusLabel(h.status)}</Badge>
                 </li>
