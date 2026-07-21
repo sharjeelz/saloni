@@ -18,6 +18,8 @@ export type Salon = {
   slug: string;
   plan: string;
   trial_ends_at: string | null;
+  timezone: string;
+  locale: string;
 };
 
 type Me = { user: User; salon: Salon | null };

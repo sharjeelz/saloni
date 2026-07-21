@@ -44,6 +44,15 @@ export async function api<T = unknown>(
   });
 
   if (!res.ok) {
+    // Session expired mid-use — clear it and bounce to login (once).
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      const seg = window.location.pathname.split("/")[1];
+      const locale = seg === "ar" || seg === "en" ? seg : "ar";
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = `/${locale}/login`;
+      }
+    }
     const body = await res.json().catch(() => ({}));
     throw new ApiError(res.status, (body as { message?: string })?.message ?? "Something went wrong.", body);
   }

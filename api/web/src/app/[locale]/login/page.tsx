@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { ApiError, post, setToken } from "@/lib/api";
+import { ApiError, get, getToken, post, setToken } from "@/lib/api";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 
 export default function LoginPage() {
@@ -13,6 +13,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<null | "credentials" | "connection">(null);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  // Already signed in? Verify the token, then skip the form.
+  useEffect(() => {
+    if (!getToken()) { setChecking(false); return; }
+    let live = true;
+    get("/auth/me")
+      .then(() => live && router.replace("/dashboard"))
+      .catch(() => live && setChecking(false)); // invalid token cleared by api()
+  }, [router]);
+
+  if (checking) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-ground">
+        <div className="size-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+      </div>
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

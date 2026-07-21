@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ApiError, patch, post } from "@/lib/api";
+import { ApiError, get, patch, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
 import {
@@ -18,7 +19,7 @@ type Appt = {
 };
 
 const STATUS_TONE: Record<string, string> = {
-  confirmed: "accent", done: "gold", no_show: "warn", cancelled: "muted", pending: "muted",
+  confirmed: "accent", done: "gold", no_show: "warn", cancelled: "muted", pending: "gold",
 };
 
 function isoDate(d: Date) {
@@ -30,6 +31,8 @@ export default function CalendarPage() {
   const c = useTranslations("app.common");
   const td = useTranslations("app.dashboard");
   const locale = useLocale();
+  const { salon } = useAuth();
+  const tz = salon?.timezone;
   const { notify } = useToast();
   const [date, setDate] = useState(() => isoDate(new Date()));
   const [walkIn, setWalkIn] = useState(false);
@@ -40,10 +43,11 @@ export default function CalendarPage() {
       done: td("statusDone"),
       no_show: td("statusNoShow"),
       cancelled: td("statusCancelled"),
+      pending: t("statusPending"),
     } as Record<string, string>)[s] ?? s;
 
   const { data, loading, error, reload } = useApi<{ data: Appt[] }>(
-    `/appointments?from=${date} 00:00:00&to=${date} 23:59:59`,
+    `/appointments?from=${date}&to=${date}`,
   );
 
   const shift = (days: number) => {
@@ -63,7 +67,7 @@ export default function CalendarPage() {
   }
 
   const time = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -98,7 +102,10 @@ export default function CalendarPage() {
                 <p className="text-sm text-muted">{a.service?.name} · {t("with")} {a.staff?.name}</p>
               </div>
               <Badge tone={STATUS_TONE[a.status]}>{statusLabel(a.status)}</Badge>
-              {a.status === "confirmed" && (
+              {a.status === "pending" && (
+                <Button variant="ghost" onClick={() => setStatus(a, "confirmed")}>{t("confirm")}</Button>
+              )}
+              {(a.status === "confirmed" || a.status === "pending") && (
                 <div className="flex gap-1.5">
                   <Button variant="ghost" onClick={() => setStatus(a, "done")}>{t("markDone")}</Button>
                   <Button variant="ghost" onClick={() => setStatus(a, "no_show")}>{t("markNoShow")}</Button>
@@ -110,16 +117,18 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {walkIn && (
-        <WalkInModal defaultDate={date} onClose={() => setWalkIn(false)}
+      {walkIn && salon && (
+        <WalkInModal slug={salon.slug} defaultDate={date} onClose={() => setWalkIn(false)}
           onSaved={() => { setWalkIn(false); reload(); notify(t("booked")); }} />
       )}
     </div>
   );
 }
 
-function WalkInModal({ defaultDate, onClose, onSaved }: {
-  defaultDate: string; onClose: () => void; onSaved: () => void;
+type Slot = { time: string };
+
+function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
+  slug: string; defaultDate: string; onClose: () => void; onSaved: () => void;
 }) {
   const t = useTranslations("app.calendar");
   const c = useTranslations("app.common");
@@ -129,14 +138,33 @@ function WalkInModal({ defaultDate, onClose, onSaved }: {
   const staff = useApi<{ data: { id: number; name: string }[] }>("/staff");
   const [form, setForm] = useState({
     branch_id: "", service_id: "", staff_id: "",
-    customer_name: "", customer_phone: "", date: defaultDate, time: "12:00",
+    customer_name: "", customer_phone: "", date: defaultDate, time: "",
   });
+  const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setForm((f) => ({ ...f, [k]: e.target.value, ...(k !== "customer_name" && k !== "customer_phone" ? { time: "" } : {}) }));
+
+  const ready = form.branch_id && form.service_id && form.staff_id && form.date;
+
+  // Load real available slots whenever the selection changes.
+  useEffect(() => {
+    if (!ready) { setSlots(null); return; }
+    let live = true;
+    setSlotsLoading(true);
+    get<{ data: Slot[] }>(
+      `/book/${slug}/availability?branch_id=${form.branch_id}&service_id=${form.service_id}&staff_id=${form.staff_id}&date=${form.date}`,
+    )
+      .then((r) => live && setSlots(r.data))
+      .catch(() => live && setSlots([]))
+      .finally(() => live && setSlotsLoading(false));
+    return () => { live = false; };
+  }, [ready, slug, form.branch_id, form.service_id, form.staff_id, form.date]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.time) return;
     setBusy(true);
     try {
       await post("/appointments", {
@@ -181,13 +209,42 @@ function WalkInModal({ defaultDate, onClose, onSaved }: {
             </Select>
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3" dir="ltr">
-          <Field label={t("date")}><Input type="date" required value={form.date} onChange={set("date")} /></Field>
-          <Field label={t("time")}><Input type="time" required value={form.time} onChange={set("time")} /></Field>
+        <Field label={t("date")}>
+          <Input type="date" required dir="ltr" value={form.date} onChange={set("date")} />
+        </Field>
+
+        {/* Real availability — no free-form/past times */}
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-ink">{t("chooseSlot")}</span>
+          {!ready ? (
+            <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-muted">{t("pickFirst")}</p>
+          ) : slotsLoading ? (
+            <div className="py-4"><Spinner /></div>
+          ) : !slots || slots.length === 0 ? (
+            <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-muted">{t("noSlots")}</p>
+          ) : (
+            <div className="flex flex-wrap gap-2" dir="ltr">
+              {slots.map((s) => (
+                <button
+                  key={s.time}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, time: s.time }))}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium tnum transition-colors ${
+                    form.time === s.time
+                      ? "border-accent bg-accent text-white"
+                      : "border-line text-ink hover:border-accent"
+                  }`}
+                >
+                  {s.time}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
         <div className="mt-1 flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>{c("cancel")}</Button>
-          <Button type="submit" disabled={busy}>{busy ? c("saving") : t("book")}</Button>
+          <Button type="submit" disabled={busy || !form.time}>{busy ? c("saving") : t("book")}</Button>
         </div>
       </form>
     </Modal>

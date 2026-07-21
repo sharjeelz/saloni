@@ -144,6 +144,11 @@
       "markDone": "Done",
       "markNoShow": "No-show",
       "markCancelled": "Cancel",
+      "confirm": "Confirm",
+      "statusPending": "Pending",
+      "chooseSlot": "Available times",
+      "noSlots": "No available times — check the branch hours and staff.",
+      "pickFirst": "Choose branch, service, staff and date to see available times.",
       "with": "with"
     },
     "billing": {
