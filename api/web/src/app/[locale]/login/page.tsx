@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { post, setToken } from "@/lib/api";
+import { ApiError, post, setToken } from "@/lib/api";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 
 export default function LoginPage() {
@@ -11,19 +11,20 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<null | "credentials" | "connection">(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(false);
+    setError(null);
     setBusy(true);
     try {
       const res = await post<{ token: string }>("/auth/login", { email, password });
       setToken(res.token);
       router.replace("/dashboard");
-    } catch {
-      setError(true);
+    } catch (err) {
+      // 422 = bad credentials; anything else (network/CORS/500) = server unreachable.
+      setError(err instanceof ApiError && err.status === 422 ? "credentials" : "connection");
       setBusy(false);
     }
   }
@@ -99,7 +100,7 @@ export default function LoginPage() {
 
               {error && (
                 <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">
-                  {t("error")}
+                  {error === "credentials" ? t("error") : t("connError")}
                 </p>
               )}
 
