@@ -93,7 +93,9 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         // Staff
         Route::get('/staff', [StaffController::class, 'index']);
         Route::post('/staff/invite', [StaffController::class, 'invite']);
+        Route::patch('/staff/{staff}', [StaffController::class, 'update']);
         Route::patch('/staff/{staff}/deactivate', [StaffController::class, 'deactivate']);
+        Route::patch('/staff/{staff}/activate', [StaffController::class, 'activate']);
 
         // Branches & hours
         Route::post('/branches', [BranchController::class, 'store']);

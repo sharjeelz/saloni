@@ -85,7 +85,8 @@
       "staff": "Staff at this branch",
       "closed": "Closed",
       "assignStaff": "Assign staff",
-      "manageHours": "Set hours"
+      "manageHours": "Set hours",
+      "noStaff": "No staff yet — invite your team first."
     },
     "services": {
       "title": "Services",
@@ -107,7 +108,8 @@
       "servicesCount": "{n} services",
       "performedBy": "Performed by",
       "noneYet": "Not set",
-      "noStaffYet": "No staff yet — invite your team first."
+      "noStaffYet": "No staff yet — invite your team first.",
+      "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff)."
     },
     "staff": {
       "title": "Team",
@@ -120,6 +122,7 @@
       "active": "Active",
       "inactive": "Inactive",
       "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
       "invited": "Staff invited.",
       "assignServices": "Services",
       "assignBranches": "Branches"
@@ -184,6 +187,10 @@
       "byStaff": "By team member",
       "byService": "By service",
       "nextUp": "Next appointments",
+      "upDate": "Date",
+      "upTime": "Time",
+      "upCustomer": "Customer",
+      "upService": "Service",
       "bookingsCol": "bookings",
       "empty": "No bookings yet today.",
       "emptyUpcoming": "Nothing on the schedule.",

@@ -71,8 +71,8 @@ class AppointmentController extends Controller
             'service_id' => ['required', Rule::exists('services', 'id')->where('salon_id', $salonId)],
             'staff_id' => ['required', Rule::exists('users', 'id')->where(fn ($q) =>
                 $q->where('salon_id', $salonId)->where('role', 'staff'))],
-            'customer_name' => ['required', 'string', 'max:255'],
-            'customer_phone' => ['required', 'string', 'max:20'],
+            'customer_name' => ['required', 'string', 'min:2', 'max:255'],
+            'customer_phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'date' => ['required', 'date_format:Y-m-d'],
             'time' => ['required', 'date_format:H:i'],
         ]);

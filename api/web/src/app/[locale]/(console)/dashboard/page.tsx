@@ -51,6 +51,8 @@ export default function DashboardPage() {
 
   const time = (iso: string, tz: string) =>
     new Intl.DateTimeFormat(locale, { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  const day = (iso: string, tz: string) =>
+    new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
 
   if (loading) return <DashboardSkeleton />;
 
@@ -146,21 +148,33 @@ export default function DashboardPage() {
         {data.upcoming.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("emptyUpcoming")}</p>
         ) : (
-          <ul className="mt-3 divide-y divide-line">
-            {data.upcoming.map((a) => (
-              <li key={a.id} className="flex items-center gap-4 py-3">
-                <span className="w-14 shrink-0 font-mono text-sm text-accent-ink tnum">
-                  {time(a.starts_at, data.range.timezone)}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-ink">{a.customer?.name}</span>
-                  <span className="block truncate text-sm text-muted">
-                    {a.service?.name} · {t("with")} {a.staff?.name}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full border-collapse text-start text-sm">
+              <thead>
+                <tr className="border-b border-line">
+                  {[t("upDate"), t("upTime"), t("upCustomer"), t("upService")].map((h) => (
+                    <th key={h} className="py-2 pe-4 text-start text-xs font-medium uppercase tracking-wide text-muted">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.upcoming.map((a) => (
+                  <tr key={a.id} className="border-b border-line last:border-0">
+                    <td className="whitespace-nowrap py-2.5 pe-4 text-muted">{day(a.starts_at, data.range.timezone)}</td>
+                    <td className="whitespace-nowrap py-2.5 pe-4 font-mono text-accent-ink tnum" dir="ltr">
+                      {time(a.starts_at, data.range.timezone)}
+                    </td>
+                    <td className="py-2.5 pe-4 font-medium text-ink">{a.customer?.name}</td>
+                    <td className="py-2.5 text-muted">
+                      {a.service?.name} · {t("with")} {a.staff?.name}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

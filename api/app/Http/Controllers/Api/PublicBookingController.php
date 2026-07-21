@@ -132,7 +132,7 @@ class PublicBookingController extends Controller
     public function requestOtp(Request $request, Salon $salon): JsonResponse
     {
         $this->pin($salon);
-        $data = $request->validate(['phone' => ['required', 'string', 'max:20']]);
+        $data = $request->validate(['phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE]]);
 
         $result = $this->otp->request('phone', $data['phone']);
         if ($result['throttled'] ?? false) {
@@ -159,8 +159,8 @@ class PublicBookingController extends Controller
             'staff_id' => ['required', 'integer'],
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'time' => ['required', 'date_format:H:i'],
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'code' => ['required', 'string', 'size:6'],
         ]);
 

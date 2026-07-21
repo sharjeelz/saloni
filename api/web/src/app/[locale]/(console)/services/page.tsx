@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { del, patch, post, put } from "@/lib/api";
@@ -38,7 +38,7 @@ export default function ServicesPage() {
   if (services.error || !services.data || !categories.data) return <LoadError onRetry={services.reload} />;
 
   const money = (p: string, cur: string) =>
-    new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(Number(p));
+    new Intl.NumberFormat(locale, { style: "currency", currency: cur, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(p));
 
   const reloadCats = () => { categories.reload(); services.reload(); };
 
@@ -252,7 +252,9 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
   const [selected, setSelected] = useState<Set<number> | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (detail.data && selected === null) setSelected(new Set(detail.data.data.staff.map((s) => s.id)));
+  useEffect(() => {
+    if (detail.data) setSelected(new Set(detail.data.data.staff.map((s) => s.id)));
+  }, [detail.data]);
 
   async function save() {
     if (!selected) return;
@@ -262,11 +264,17 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
   }
   const toggle = (id: number) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const noStaff = allStaff.data && allStaff.data.data.length === 0;
+  const staffList = allStaff.data?.data ?? [];
+  const failed = allStaff.error || detail.error;
+  const ready = !allStaff.loading && !detail.loading && selected !== null;
 
   return (
     <Modal open onClose={onClose} title={`${t("assignStaff")} · ${service.name}`}>
-      {allStaff.loading || detail.loading || !selected ? <Spinner /> : noStaff ? (
+      {failed ? (
+        <LoadError onRetry={() => { allStaff.reload(); detail.reload(); }} />
+      ) : !ready ? (
+        <Spinner />
+      ) : staffList.length === 0 ? (
         <div className="py-4 text-center">
           <p className="text-muted">{t("noStaffYet")}</p>
           <Link href="/staff" className="mt-3 inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white">
@@ -275,9 +283,10 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          {allStaff.data!.data.map((s) => (
+          <p className="mb-1 text-xs text-muted">{t("branchHint")}</p>
+          {staffList.map((s) => (
             <label key={s.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-2">
-              <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} />
+              <input type="checkbox" checked={selected!.has(s.id)} onChange={() => toggle(s.id)} />
               <span className="text-ink">{s.name}</span>
               {s.title && <span className="text-sm text-muted">{s.title}</span>}
             </label>

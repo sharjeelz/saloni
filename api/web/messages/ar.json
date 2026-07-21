@@ -85,7 +85,8 @@
       "staff": "موظفو الفرع",
       "closed": "مغلق",
       "assignStaff": "تعيين الموظفين",
-      "manageHours": "تحديد الأوقات"
+      "manageHours": "تحديد الأوقات",
+      "noStaff": "لا موظفين بعد — ادعُ فريقك أولاً."
     },
     "services": {
       "title": "الخدمات",
@@ -107,7 +108,8 @@
       "servicesCount": "{n} خدمة",
       "performedBy": "يقدّمها",
       "noneYet": "غير محدّد",
-      "noStaffYet": "لا موظفين بعد — ادعُ فريقك أولاً."
+      "noStaffYet": "لا موظفين بعد — ادعُ فريقك أولاً.",
+      "branchHint": "يصبح الموظف قابلاً للحجز بعد تعيينه إلى فرع أيضاً (الفروع ← تعيين الموظفين)."
     },
     "staff": {
       "title": "الفريق",
@@ -120,6 +122,7 @@
       "active": "نشط",
       "inactive": "غير نشط",
       "deactivate": "إيقاف",
+      "reactivate": "إعادة تفعيل",
       "invited": "تمت دعوة الموظف.",
       "assignServices": "الخدمات",
       "assignBranches": "الفروع"
@@ -184,6 +187,10 @@
       "byStaff": "حسب الموظف",
       "byService": "حسب الخدمة",
       "nextUp": "المواعيد القادمة",
+      "upDate": "التاريخ",
+      "upTime": "الوقت",
+      "upCustomer": "العميل",
+      "upService": "الخدمة",
       "bookingsCol": "حجز",
       "empty": "لا حجوزات لهذا اليوم بعد.",
       "emptyUpcoming": "لا مواعيد على الجدول.",

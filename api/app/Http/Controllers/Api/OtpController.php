@@ -19,7 +19,7 @@ class OtpController extends Controller
     public function request(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
         ]);
 
         $result = $this->otp->request('phone', $data['phone']);
@@ -43,7 +43,7 @@ class OtpController extends Controller
     public function verify(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'code' => ['required', 'string', 'size:6'],
         ]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { del, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
@@ -123,12 +123,13 @@ function HoursModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
   const t = useTranslations("app.branches");
   const c = useTranslations("app.common");
   const { notify } = useToast();
-  const { data, loading } = useApi<{ data: Hour[] }>(`/branches/${branch.id}/hours`);
-  const [rows, setRows] = useState<Record<number, { open: boolean; start: string; end: string }>>({});
+  const { data, loading, error, reload } = useApi<{ data: Hour[] }>(`/branches/${branch.id}/hours`);
+  const [rows, setRows] = useState<Record<number, { open: boolean; start: string; end: string }> | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Seed once from the loaded hours.
-  if (data && Object.keys(rows).length === 0) {
+  // Seed from the loaded hours (branch-level rows only).
+  useEffect(() => {
+    if (!data) return;
     const next: Record<number, { open: boolean; start: string; end: string }> = {};
     for (let d = 0; d < 7; d++) {
       const h = data.data.find((x) => x.weekday === d && x.user_id === null);
@@ -137,9 +138,10 @@ function HoursModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
         : { open: false, start: "10:00", end: "22:00" };
     }
     setRows(next);
-  }
+  }, [data]);
 
   async function save() {
+    if (!rows) return;
     setBusy(true);
     const hours = Object.entries(rows)
       .filter(([, v]) => v.open)
@@ -150,7 +152,7 @@ function HoursModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
 
   return (
     <Modal open onClose={onClose} title={`${t("hours")} · ${branch.name}`}>
-      {loading ? <Spinner /> : (
+      {error ? <LoadError onRetry={reload} /> : loading || !rows ? <Spinner /> : (
         <div className="flex flex-col gap-2">
           {WEEKDAYS.map((label, d) => {
             const row = rows[d] ?? { open: false, start: "10:00", end: "22:00" };
@@ -190,9 +192,9 @@ function StaffModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
   const [selected, setSelected] = useState<Set<number> | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (detail.data && selected === null) {
-    setSelected(new Set(detail.data.data.staff.map((s) => s.id)));
-  }
+  useEffect(() => {
+    if (detail.data) setSelected(new Set(detail.data.data.staff.map((s) => s.id)));
+  }, [detail.data]);
 
   async function save() {
     if (!selected) return;
@@ -205,14 +207,23 @@ function StaffModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
 
+  const staffList = allStaff.data?.data ?? [];
+  const failed = allStaff.error || detail.error;
+  const ready = !allStaff.loading && !detail.loading && selected !== null;
+
   return (
     <Modal open onClose={onClose} title={`${t("staff")} · ${branch.name}`}>
-      {allStaff.loading || detail.loading || !selected ? <Spinner /> : (
+      {failed ? (
+        <LoadError onRetry={() => { allStaff.reload(); detail.reload(); }} />
+      ) : !ready ? (
+        <Spinner />
+      ) : staffList.length === 0 ? (
+        <p className="py-4 text-center text-sm text-muted">{t("noStaff")}</p>
+      ) : (
         <div className="flex flex-col gap-1.5">
-          {allStaff.data!.data.length === 0 && <p className="text-sm text-muted">—</p>}
-          {allStaff.data!.data.map((s) => (
+          {staffList.map((s) => (
             <label key={s.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-2">
-              <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} />
+              <input type="checkbox" checked={selected!.has(s.id)} onChange={() => toggle(s.id)} />
               <span className="text-ink">{s.name}</span>
               {s.title && <span className="text-sm text-muted">{s.title}</span>}
             </label>

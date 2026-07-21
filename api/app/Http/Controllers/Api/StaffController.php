@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Sms\SmsSender;
 use App\Support\Tenancy;
+use App\Support\ValidationRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,9 +34,9 @@ class StaffController extends Controller
         $salonId = Tenancy::id();
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:255'],
             'phone' => [
-                'required', 'string', 'max:20',
+                'required', 'string', 'max:20', ValidationRules::PHONE,
                 // Unique per salon so one number maps to one staff record here.
                 Rule::unique('users', 'phone')->where(fn ($q) => $q->where('salon_id', $salonId)),
             ],
@@ -68,6 +69,31 @@ class StaffController extends Controller
         ], 201);
     }
 
+    /** Edit a staff member's details. Owner only. */
+    public function update(Request $request, User $staff): JsonResponse
+    {
+        abort_unless($staff->role === 'staff', 404);
+        $salonId = Tenancy::id();
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'phone' => [
+                'sometimes', 'string', 'max:20', ValidationRules::PHONE,
+                Rule::unique('users', 'phone')
+                    ->where(fn ($q) => $q->where('salon_id', $salonId))
+                    ->ignore($staff->id),
+            ],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($staff->id)],
+            'title' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $staff->update($data);
+
+        return response()->json([
+            'staff' => $staff->only(['id', 'name', 'phone', 'email', 'title', 'role', 'is_active']),
+        ]);
+    }
+
     /** Deactivate a staff member (soft — keeps history). Owner only. */
     public function deactivate(User $staff): JsonResponse
     {
@@ -76,5 +102,15 @@ class StaffController extends Controller
         $staff->update(['is_active' => false]);
 
         return response()->json(['message' => 'Staff deactivated.']);
+    }
+
+    /** Re-activate a previously deactivated staff member. Owner only. */
+    public function activate(User $staff): JsonResponse
+    {
+        abort_unless($staff->role === 'staff', 404);
+
+        $staff->update(['is_active' => true]);
+
+        return response()->json(['message' => 'Staff reactivated.']);
     }
 }

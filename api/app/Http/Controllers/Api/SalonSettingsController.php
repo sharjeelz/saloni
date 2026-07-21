@@ -21,8 +21,8 @@ class SalonSettingsController extends Controller
         $salon = Salon::findOrFail(Tenancy::id());
 
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'brand_color' => ['nullable', 'string', 'regex:/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/'],
             'logo_path' => ['nullable', 'string', 'max:2048'],
             'timezone' => ['sometimes', 'string', 'max:64'],
