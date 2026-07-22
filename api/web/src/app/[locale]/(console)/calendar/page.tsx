@@ -191,7 +191,6 @@ export default function CalendarPage() {
 
 function CancelModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (reason: string) => void }) {
   const t = useTranslations("app.calendar");
-  const c = useTranslations("app.common");
   const [reason, setReason] = useState("");
   return (
     <Modal open onClose={onClose} title={t("cancelModalTitle")}>
@@ -200,8 +199,8 @@ function CancelModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("cancelReasonPlaceholder")} />
         </Field>
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>{c("cancel")}</Button>
-          <Button variant="danger" onClick={() => onConfirm(reason)}>{t("markCancelled")}</Button>
+          <Button variant="ghost" onClick={onClose}>{t("keepBooking")}</Button>
+          <Button variant="danger" onClick={() => onConfirm(reason)}>{t("cancelConfirmBtn")}</Button>
         </div>
       </div>
     </Modal>

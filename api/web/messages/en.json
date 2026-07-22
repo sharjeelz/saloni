@@ -262,6 +262,8 @@
       "cancelModalTitle": "Cancel booking",
       "cancelReasonLabel": "Reason (optional)",
       "cancelReasonPlaceholder": "e.g. customer requested, double-booked…",
+      "cancelConfirmBtn": "Cancel booking",
+      "keepBooking": "Keep booking",
       "confirm": "Confirm",
       "statusPending": "Pending",
       "chooseSlot": "Available times",

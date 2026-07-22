@@ -262,6 +262,8 @@
       "cancelModalTitle": "إلغاء الحجز",
       "cancelReasonLabel": "السبب (اختياري)",
       "cancelReasonPlaceholder": "مثال: بطلب العميل، حجز مزدوج…",
+      "cancelConfirmBtn": "إلغاء الحجز",
+      "keepBooking": "الإبقاء على الحجز",
       "confirm": "تأكيد",
       "statusPending": "معلّق",
       "chooseSlot": "الأوقات المتاحة",
