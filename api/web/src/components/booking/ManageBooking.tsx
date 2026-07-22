@@ -82,7 +82,7 @@ export default function ManageBooking({ token }: { token: string }) {
     if (!confirm(t("cancelConfirm"))) return;
     setBusy(true); setError(null);
     try { await post(`/book/manage/${token}/cancel`); load(); }
-    catch (e) { setError(e instanceof ApiError ? e.message : "Error"); }
+    catch (e) { setError(e instanceof ApiError ? e.message : t("genericError")); }
     finally { setBusy(false); }
   }
 
@@ -93,7 +93,7 @@ export default function ManageBooking({ token }: { token: string }) {
       await post(`/book/manage/${token}/reschedule`, { date, time: pick });
       setRescheduling(false); load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Error");
+      setError(e instanceof ApiError ? e.message : t("genericError"));
     } finally { setBusy(false); }
   }
 

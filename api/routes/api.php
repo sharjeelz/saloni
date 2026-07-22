@@ -22,10 +22,10 @@ use Illuminate\Support\Facades\Route;
 | Public auth routes
 |--------------------------------------------------------------------------
 */
-Route::post('/auth/signup', [AuthController::class, 'signup']);
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/otp/request', [OtpController::class, 'request']);
-Route::post('/auth/otp/verify', [OtpController::class, 'verify']);
+Route::post('/auth/signup', [AuthController::class, 'signup'])->middleware('throttle:10,1');
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
+Route::post('/auth/otp/request', [OtpController::class, 'request'])->middleware('throttle:8,1');
+Route::post('/auth/otp/verify', [OtpController::class, 'verify'])->middleware('throttle:20,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -46,9 +46,10 @@ Route::prefix('book/{salon:slug}')->group(function () {
     Route::get('/branches', [PublicBookingController::class, 'branches']);
     Route::get('/services', [PublicBookingController::class, 'services']);
     Route::get('/availability', [PublicBookingController::class, 'availability']);
-    Route::post('/otp', [PublicBookingController::class, 'requestOtp']);
-    Route::post('/appointments', [PublicBookingController::class, 'confirm']);
-    Route::post('/lookup', [PublicBookingController::class, 'lookup']);
+    // Cost/abuse-sensitive (real SMS + booking creation) — throttle per IP.
+    Route::post('/otp', [PublicBookingController::class, 'requestOtp'])->middleware('throttle:8,1');
+    Route::post('/appointments', [PublicBookingController::class, 'confirm'])->middleware('throttle:15,1');
+    Route::post('/lookup', [PublicBookingController::class, 'lookup'])->middleware('throttle:8,1');
 });
 
 /*
@@ -120,7 +121,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::delete('/service-categories/{serviceCategory}', [ServiceCategoryController::class, 'destroy']);
 
         // Services + staff assignment
-        Route::post('/services/scan-menu', [ServiceController::class, 'scanMenu']);
+        Route::post('/services/scan-menu', [ServiceController::class, 'scanMenu'])->middleware('throttle:10,1');
         Route::post('/services/import', [ServiceController::class, 'import']);
         Route::post('/services', [ServiceController::class, 'store']);
         Route::patch('/services/{service}', [ServiceController::class, 'update']);

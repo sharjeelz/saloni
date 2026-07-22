@@ -74,6 +74,25 @@ class RolesAndStaffTest extends TestCase
         $this->assertDatabaseHas('users', ['salon_id' => $salon->id, 'phone' => '+966501112222']);
     }
 
+    public function test_local_and_international_phone_forms_canonicalize_to_one_e164(): void
+    {
+        // Every way a KSA number gets typed must land on the same +9665… string,
+        // or customer identity / dedupe / the booking limit silently break.
+        foreach ([
+            '0509998877' => '+966509998877',       // local trunk
+            '966509998877' => '+966509998877',     // country code, no +
+            '00966509998877' => '+966509998877',   // 00 international prefix
+            '509998877' => '+966509998877',        // bare national
+            '+966 50 999 8877' => '+966509998877', // spaced international
+        ] as $input => $expected) {
+            $input = (string) $input; // PHP casts numeric string keys to int
+            [$salon, $owner] = $this->makeSalonWithOwner('salon-' . md5($input));
+            Sanctum::actingAs($owner);
+            $this->postJson('/api/staff/invite', ['name' => 'Test', 'phone' => $input])->assertCreated();
+            $this->assertDatabaseHas('users', ['salon_id' => $salon->id, 'phone' => $expected]);
+        }
+    }
+
     public function test_owner_can_edit_and_reactivate_staff(): void
     {
         [, $owner, $staff] = $this->makeSalonWithOwner();

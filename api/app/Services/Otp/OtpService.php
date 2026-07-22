@@ -70,8 +70,9 @@ class OtpService
             'throttled' => false,
             'otp_id' => $otp->id,
             'expires_at' => $otp->expires_at,
-            // Only exposed outside production to ease testing.
-            'debug_code' => app()->environment('production') ? null : $code,
+            // Exposed ONLY when explicitly enabled (config/otp.php) — never in
+            // production. An env-based gate is not enough; this is opt-in.
+            'debug_code' => config('otp.expose_debug_code') ? $code : null,
         ];
     }
 

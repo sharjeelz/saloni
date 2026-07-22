@@ -65,4 +65,24 @@ class AuthFlowTest extends TestCase
             'code' => '000000',
         ])->assertStatus(422);
     }
+
+    public function test_otp_debug_code_is_withheld_unless_explicitly_enabled(): void
+    {
+        // Default posture (production): the plaintext code must never be returned.
+        config(['otp.expose_debug_code' => false]);
+
+        $res = $this->postJson('/api/auth/otp/request', ['phone' => '+966500000000'])->assertOk();
+        $this->assertNull($res->json('debug_code'));
+    }
+
+    public function test_otp_request_is_rate_limited_per_ip(): void
+    {
+        // Route throttle is 8/min; the 9th request from the same IP is blocked
+        // even with distinct phone numbers (SMS-bombing / cost protection).
+        for ($i = 0; $i < 8; $i++) {
+            $this->postJson('/api/auth/otp/request', ['phone' => "+9665000000{$i}0"])->assertOk();
+        }
+
+        $this->postJson('/api/auth/otp/request', ['phone' => '+966500000099'])->assertStatus(429);
+    }
 }
