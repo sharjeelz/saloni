@@ -40,7 +40,8 @@ class SalonSettingsController extends Controller
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
-            'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048'],
+            // Raster only — SVG can carry embedded <script> (stored XSS on the API origin).
+            'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $salon = Salon::findOrFail(Tenancy::id());

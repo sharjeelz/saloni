@@ -237,6 +237,13 @@ class BookingFlowTest extends TestCase
         $this->assertDatabaseHas('appointments', [
             'id' => $appt->id, 'cancelled_by' => 'owner', 'cancellation_reason' => 'Double booked',
         ]);
+
+        // Re-confirming clears the stale cancellation metadata (no "confirmed but cancelled" rows).
+        $this->patchJson("/api/appointments/{$appt->id}/status", ['status' => 'confirmed'])->assertOk();
+        $this->assertDatabaseHas('appointments', [
+            'id' => $appt->id, 'status' => 'confirmed',
+            'cancelled_at' => null, 'cancelled_by' => null, 'cancellation_reason' => null,
+        ]);
     }
 
     public function test_owner_can_find_a_booking_by_reference(): void

@@ -106,10 +106,12 @@ class AvailabilityService
         }
 
         $closures = $this->timeOffIntervals($branch->id, null, $day, $tz);
+        $now = Carbon::now($tz);
 
-        $anyWindow = false;   // a shift is scheduled today at all
-        $anyOpen = false;     // a shift window survives the branch closure
-        $anyFree = false;     // a shift window survives closure + that staff's own time-off
+        $anyWindow = false;      // a shift is scheduled today at all
+        $anyOpen = false;        // a shift window survives the branch closure
+        $anyFree = false;        // a shift window survives closure + that staff's own time-off
+        $anyFutureFree = false;  // ...and part of it is still ahead of now
 
         foreach ($staff as $member) {
             $windows = $this->workingWindows($branch->id, $member->id, $weekday, $day, $tz);
@@ -125,6 +127,9 @@ class AvailabilityService
                 }
                 if (! $this->windowCovered($wStart, $wEnd, array_merge($closures, $off))) {
                     $anyFree = true;
+                    if ($wEnd->greaterThan($now)) {
+                        $anyFutureFree = true;
+                    }
                 }
             }
         }
@@ -132,8 +137,12 @@ class AvailabilityService
         if (! $anyWindow || ! $anyOpen) {
             return 'closed';
         }
+        if (! $anyFree) {
+            return 'off';
+        }
 
-        return $anyFree ? 'full' : 'off';
+        // Open & staffed but every free window already elapsed today.
+        return $anyFutureFree ? 'full' : 'past';
     }
 
     /** True when [start, end) is fully contained in a single busy interval. */

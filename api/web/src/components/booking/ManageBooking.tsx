@@ -149,7 +149,7 @@ export default function ManageBooking({ token }: { token: string }) {
             {rescheduling ? (
               <div className="mt-6">
                 <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{t("pickNewTime")}</h2>
-                <div className="mb-4 flex gap-2 overflow-x-auto pb-1" dir="ltr">
+                <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
                   {days.map((d) => (
                     <button key={d} onClick={() => setDate(d)}
                       className={`flex min-h-11 shrink-0 items-center justify-center rounded-xl border px-3.5 py-2 text-sm transition-colors ${date === d ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"}`}>
@@ -160,6 +160,7 @@ export default function ManageBooking({ token }: { token: string }) {
                 {slotsLoading ? <Spinner inline /> : !slots || slots.length === 0 ? (
                   <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
                     {slotsReason === "closed" ? t("closedDay")
+                      : slotsReason === "past" ? t("pastDay")
                       : slotsReason === "off" ? t("staffOff")
                       : slotsReason === "no_staff" ? t("noSpecialist")
                       : t("noSlots")}

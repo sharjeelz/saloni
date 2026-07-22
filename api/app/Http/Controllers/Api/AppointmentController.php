@@ -10,6 +10,7 @@ use App\Models\Salon;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Booking\BookingService;
+use Illuminate\Database\QueryException;
 use App\Support\Tenancy;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -111,16 +112,34 @@ class AppointmentController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $appointment->status = $data['status'];
-        if ($data['status'] === 'cancelled') {
+        $status = $data['status'];
+        $appointment->status = $status;
+
+        if ($status === 'cancelled') {
             $appointment->cancelled_at = now();
             $appointment->cancelled_by = $request->user()->role; // owner | staff
             $appointment->cancellation_reason = $data['reason'] ?? null;
+        } else {
+            // Leaving the cancelled state — don't carry stale cancellation metadata.
+            $appointment->cancelled_at = null;
+            $appointment->cancelled_by = null;
+            $appointment->cancellation_reason = null;
         }
-        if ($data['status'] === 'done') {
+
+        if ($status === 'done') {
             $appointment->customer?->update(['last_visit_at' => $appointment->ends_at]);
         }
-        $appointment->save();
+
+        try {
+            $appointment->save();
+        } catch (QueryException $e) {
+            // Re-activating a cancelled booking whose slot was taken in the meantime
+            // trips the no-overlap constraint.
+            if ($e->getCode() === '23P01') {
+                return response()->json(['message' => 'That time was booked by someone else.'], 409);
+            }
+            throw $e;
+        }
 
         return response()->json(['data' => $appointment]);
     }

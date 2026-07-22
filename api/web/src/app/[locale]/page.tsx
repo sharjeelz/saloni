@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { use } from "react";
+import { Link } from "@/i18n/navigation";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 
 const featureKeys = ["booking", "branches", "reminders"] as const;
@@ -28,10 +29,10 @@ export default function HomePage({
             <a href="#features" className="hover:text-ink">
               {nav("features")}
             </a>
-            <a href="#pricing" className="hover:text-ink">
-              {nav("pricing")}
-            </a>
           </nav>
+          <Link href="/login" className="text-sm font-medium text-ink hover:text-accent-ink">
+            {nav("signIn")}
+          </Link>
           <LocaleSwitcher />
         </div>
       </header>
@@ -47,12 +48,12 @@ export default function HomePage({
           </h1>
           <p className="text-pretty text-lg text-muted">{t("subtitle")}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="#"
+            <Link
+              href="/login"
               className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:opacity-90"
             >
               {t("ctaPrimary")}
-            </a>
+            </Link>
             <a
               href="#features"
               className="rounded-full border border-line px-5 py-2.5 text-sm font-medium hover:border-accent"

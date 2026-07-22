@@ -173,11 +173,16 @@ class ServiceController extends Controller
 
         $ck = 'text:' . mb_strtolower($label);
         if (! isset($cache[$ck])) {
-            $cat = ServiceCategory::firstOrCreate(['name' => $label], ['sort_order' => $nextSort]);
-            if ($cat->wasRecentlyCreated) {
-                $nextSort++;
-            }
-            $cache[$ck] = $cat->id;
+            // Match either language (case-insensitive) so "Nails" doesn't create a
+            // second category alongside one whose English name is in name_en.
+            $lower = mb_strtolower($label);
+            $existing = ServiceCategory::where(fn ($q) => $q
+                ->whereRaw('LOWER(name) = ?', [$lower])
+                ->orWhereRaw('LOWER(name_en) = ?', [$lower]))->first();
+
+            $cache[$ck] = $existing
+                ? $existing->id
+                : ServiceCategory::create(['name' => $label, 'sort_order' => $nextSort++])->id;
         }
 
         return $cache[$ck];
