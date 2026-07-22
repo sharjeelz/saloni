@@ -6,9 +6,10 @@ import { ApiError, patch, upload } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Card, Field, Input, LoadError, PageHeader, Select, Spinner } from "@/components/ui/kit";
+import { BookingPagePanel } from "@/components/settings/BookingPagePanel";
 
 type Salon = {
-  name: string; phone: string | null; vat_number: string | null;
+  name: string; slug: string; phone: string | null; vat_number: string | null;
   brand_color: string | null; timezone: string; locale: string; logo_path: string | null;
 };
 
@@ -74,8 +75,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <PageHeader title={t("title")} />
+      <BookingPagePanel slug={form.slug} locale={form.locale} />
       <Card className="p-6">
         <form onSubmit={save} className="flex flex-col gap-4">
           <Field label={t("name")}><Input required minLength={2} value={form.name} onChange={set("name")} /></Field>
