@@ -11,6 +11,7 @@ import { BookingPagePanel } from "@/components/settings/BookingPagePanel";
 type Salon = {
   name: string; slug: string; phone: string | null; vat_number: string | null;
   brand_color: string | null; timezone: string; locale: string; logo_path: string | null;
+  notification_channel: string;
 };
 
 const TIMEZONES = ["Asia/Riyadh", "Asia/Dubai", "Asia/Kuwait", "Asia/Bahrain", "Asia/Qatar"];
@@ -65,6 +66,7 @@ export default function SettingsPage() {
         brand_color: form.brand_color || null,
         timezone: form.timezone,
         locale: form.locale,
+        notification_channel: form.notification_channel,
       });
       notify(t("saved"));
     } catch (e2) {
@@ -136,6 +138,14 @@ export default function SettingsPage() {
             </div>
             <p className="mt-1.5 text-xs text-muted">{t("logoHint")}</p>
           </div>
+
+          <Field label={t("notifChannel")}>
+            <Select value={form.notification_channel} onChange={set("notification_channel")}>
+              <option value="sms">{t("notifSms")}</option>
+              <option value="whatsapp">{t("notifWhatsapp")}</option>
+            </Select>
+          </Field>
+          <p className="-mt-1 text-xs text-muted">{t("notifChannelHint")}</p>
 
           {err && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{err}</p>}
           <div className="mt-1 flex justify-end">

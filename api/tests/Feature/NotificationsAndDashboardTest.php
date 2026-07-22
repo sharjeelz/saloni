@@ -10,6 +10,7 @@ use App\Models\Service;
 use App\Models\User;
 use App\Models\WorkingHour;
 use App\Services\Sms\SmsSender;
+use App\Services\WhatsApp\WhatsAppSender;
 use App\Support\Tenancy;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,12 +24,14 @@ class NotificationsAndDashboardTest extends TestCase
     protected string $tz = 'Asia/Riyadh';
     /** @var array<int, array{to:string, message:string}> */
     protected object $sms;
+    /** @var array<int, array{to:string, message:string}> */
+    protected object $whatsapp;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Capture every SMS the app sends.
+        // Capture every message per channel so tests can assert routing.
         $this->sms = new class implements SmsSender {
             public array $sent = [];
 
@@ -39,7 +42,19 @@ class NotificationsAndDashboardTest extends TestCase
                 return true;
             }
         };
+        $this->whatsapp = new class implements WhatsAppSender {
+            public array $sent = [];
+
+            public function send(string $to, string $message): bool
+            {
+                $this->sent[] = ['to' => $to, 'message' => $message];
+
+                return true;
+            }
+        };
+
         $this->app->instance(SmsSender::class, $this->sms);
+        $this->app->instance(WhatsAppSender::class, $this->whatsapp);
     }
 
     protected function makeSalon(): array
@@ -127,6 +142,28 @@ class NotificationsAndDashboardTest extends TestCase
         $this->assertCount(1, $toOwner);
         // Customer also got their confirmation.
         $this->assertNotEmpty(array_filter($this->sms->sent, fn ($m) => $m['to'] === $phone));
+    }
+
+    public function test_whatsapp_channel_routes_booking_notifications(): void
+    {
+        $ctx = $this->makeSalon();
+        $ctx['salon']->update(['notification_channel' => 'whatsapp']);
+
+        $phone = '+966501234567';
+        $code = $this->postJson('/api/book/glow/otp', ['phone' => $phone])->json('debug_code');
+
+        $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $ctx['branch']->id, 'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
+            'date' => $ctx['date']->format('Y-m-d'), 'time' => '10:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $code,
+        ])->assertCreated();
+
+        // Confirmation + owner alert went out over WhatsApp.
+        $this->assertNotEmpty(array_filter($this->whatsapp->sent, fn ($m) => $m['to'] === $phone));
+        $this->assertNotEmpty(array_filter($this->whatsapp->sent, fn ($m) => str_contains($m['message'], 'New booking')));
+
+        // The OTP still went over SMS; booking notifications did not.
+        $this->assertEmpty(array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'New booking')));
+        $this->assertEmpty(array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'confirmed for')));
     }
 
     // ---- E11: dashboard -------------------------------------------------------

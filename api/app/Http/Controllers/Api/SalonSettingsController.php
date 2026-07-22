@@ -28,6 +28,7 @@ class SalonSettingsController extends Controller
             'logo_path' => ['nullable', 'string', 'max:2048'],
             'timezone' => ['sometimes', 'string', 'max:64'],
             'locale' => ['sometimes', 'string', 'in:ar,en'],
+            'notification_channel' => ['sometimes', 'string', 'in:sms,whatsapp'],
         ]);
 
         $salon->update($data);
