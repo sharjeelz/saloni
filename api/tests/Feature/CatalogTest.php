@@ -278,6 +278,24 @@ class CatalogTest extends TestCase
         $this->assertDatabaseCount('service_categories', 1);
     }
 
+    public function test_import_text_category_dedupes_against_english_name(): void
+    {
+        [$salon, $owner] = $this->salon();
+        Tenancy::set($salon);
+        // A bilingual category already exists (Arabic name + English name_en).
+        ServiceCategory::create(['name' => 'الأظافر', 'name_en' => 'Nails', 'sort_order' => 0]);
+        Tenancy::clear();
+        Sanctum::actingAs($owner);
+
+        // AI tags this row with the raw English heading (no preset key).
+        $this->postJson('/api/services/import', ['services' => [
+            ['name' => 'Gel polish', 'duration_min' => 40, 'price' => 70, 'category' => 'Nails'],
+        ]])->assertCreated();
+
+        // Reused the existing category via name_en — no duplicate.
+        $this->assertDatabaseCount('service_categories', 1);
+    }
+
     public function test_category_presets_are_listed(): void
     {
         [, $owner] = $this->salon();

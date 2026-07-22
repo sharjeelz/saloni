@@ -160,6 +160,7 @@ export default function ManageBooking({ token }: { token: string }) {
                 {slotsLoading ? <Spinner inline /> : !slots || slots.length === 0 ? (
                   <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
                     {slotsReason === "closed" ? t("closedDay")
+                      : slotsReason === "past" ? t("pastDay")
                       : slotsReason === "off" ? t("staffOff")
                       : slotsReason === "no_staff" ? t("noSpecialist")
                       : t("noSlots")}

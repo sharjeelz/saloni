@@ -50,6 +50,7 @@
     "noSlots": "No times available on this day — try another date.",
     "genericError": "Something went wrong. Please try again.",
     "closedDay": "The salon is closed on this day — please pick another date.",
+    "pastDay": "Today's hours have ended — please pick another date.",
     "staffOff": "This specialist is off on this day — try another date, or choose “Any available”.",
     "noSpecialist": "No specialist is available for this service at this location.",
     "yourDetails": "Your details",
