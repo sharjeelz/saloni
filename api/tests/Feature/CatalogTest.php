@@ -199,15 +199,18 @@ class CatalogTest extends TestCase
 
     public function test_owner_imports_reviewed_services_creating_categories_in_order(): void
     {
-        [$salon, $owner] = $this->salon();
+        [$salon, $owner, $staff] = $this->salon();
         Sanctum::actingAs($owner);
 
-        $this->postJson('/api/services/import', ['services' => [
-            ['name' => 'قص شعر', 'name_en' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
-            ['name' => 'Beard trim', 'duration_min' => 15, 'price' => 20, 'category' => 'Hair'],
-            ['name' => 'Manicure', 'duration_min' => 45, 'price' => 60, 'category' => 'Nails'],
-            ['name' => 'Quick wash', 'duration_min' => 10, 'price' => 10, 'category' => null],
-        ]])->assertCreated()->assertJsonPath('created', 4);
+        $this->postJson('/api/services/import', [
+            'services' => [
+                ['name' => 'قص شعر', 'name_en' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
+                ['name' => 'Beard trim', 'duration_min' => 15, 'price' => 20, 'category' => 'Hair'],
+                ['name' => 'Manicure', 'duration_min' => 45, 'price' => 60, 'category' => 'Nails'],
+                ['name' => 'Quick wash', 'duration_min' => 10, 'price' => 10, 'category' => null],
+            ],
+            'staff_ids' => [$staff->id],
+        ])->assertCreated()->assertJsonPath('created', 4);
 
         // Two categories (Hair deduped), in menu order; four active services.
         $this->assertDatabaseCount('service_categories', 2);
@@ -215,6 +218,25 @@ class CatalogTest extends TestCase
         $this->assertDatabaseHas('services', ['salon_id' => $salon->id, 'name' => 'قص شعر', 'name_en' => 'Haircut']);
         $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Hair', 'sort_order' => 0]);
         $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Nails', 'sort_order' => 1]);
+
+        // Every imported service was assigned to the chosen staff member.
+        $this->assertDatabaseCount('service_staff', 4);
+        $haircut = Service::where('name', 'قص شعر')->first();
+        $this->assertTrue($haircut->staff->contains($staff->id));
+    }
+
+    public function test_import_rejects_staff_from_another_salon(): void
+    {
+        [, $ownerA] = $this->salon('glow');
+        [, , $staffB] = $this->salon('lush');
+        Sanctum::actingAs($ownerA);
+
+        $this->postJson('/api/services/import', [
+            'services' => [['name' => 'Cut', 'duration_min' => 30, 'price' => 40]],
+            'staff_ids' => [$staffB->id],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('services', 0);
     }
 
     public function test_menu_import_is_owner_only(): void

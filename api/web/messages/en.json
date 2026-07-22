@@ -243,6 +243,8 @@
       "importFound": "Found {n} services. Edit anything, remove what you don't want, then add them.",
       "importEmpty": "We couldn't find any services on that image — try a clearer photo.",
       "importAnother": "Try another photo",
+      "importAssign": "Who performs these?",
+      "importAssignHint": "Applies to all imported services — adjust any service individually later.",
       "importAdd": "Add {n} services",
       "importDone": "Added {n} services."
     },

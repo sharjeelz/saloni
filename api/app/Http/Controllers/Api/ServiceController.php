@@ -89,6 +89,8 @@ class ServiceController extends Controller
      */
     public function import(Request $request): JsonResponse
     {
+        $salonId = Tenancy::id();
+
         $data = $request->validate([
             'services' => ['required', 'array', 'min:1', 'max:200'],
             'services.*.name' => ['required', 'string', 'max:255'],
@@ -96,7 +98,15 @@ class ServiceController extends Controller
             'services.*.duration_min' => ['required', 'integer', 'min:5', 'max:600'],
             'services.*.price' => ['required', 'numeric', 'min:0'],
             'services.*.category' => ['nullable', 'string', 'max:255'],
+            // Optionally assign every imported service to these staff up front.
+            'staff_ids' => ['sometimes', 'array'],
+            'staff_ids.*' => [
+                'integer',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('salon_id', $salonId)->where('role', 'staff')),
+            ],
         ]);
+
+        $staffIds = $data['staff_ids'] ?? [];
 
         $categoryIds = [];                                          // lowercased name => id
         $nextSort = (int) (ServiceCategory::max('sort_order') ?? -1) + 1;
@@ -118,7 +128,7 @@ class ServiceController extends Controller
                 $categoryId = $categoryIds[$key];
             }
 
-            Service::create([
+            $service = Service::create([
                 'name' => $row['name'],
                 'name_en' => $row['name_en'] ?? null,
                 'duration_min' => $row['duration_min'],
@@ -126,6 +136,11 @@ class ServiceController extends Controller
                 'service_category_id' => $categoryId,
                 'is_active' => true,
             ]);
+
+            if ($staffIds) {
+                $service->staff()->attach($staffIds);
+            }
+
             $created++;
         }
 

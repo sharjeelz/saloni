@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ApiError, post, upload } from "@/lib/api";
+import { ApiError, get, post, upload } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
 import { Button, Input, Spinner } from "@/components/ui/kit";
 
 type Row = { name: string; name_en: string | null; duration_min: number; price: number; category: string | null };
+type StaffLite = { id: number; name: string; is_active?: boolean };
 
 /**
  * Onboarding shortcut: the owner uploads a photo of their price list, Claude
@@ -21,7 +22,23 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
   const [rows, setRows] = useState<Row[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [staff, setStaff] = useState<StaffLite[]>([]);
+  const [staffIds, setStaffIds] = useState<number[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Load the team so imported services can be assigned up front (default: all).
+  useEffect(() => {
+    get<{ data: StaffLite[] }>("/staff")
+      .then((r) => {
+        const active = r.data.filter((s) => s.is_active !== false);
+        setStaff(active);
+        setStaffIds(active.map((s) => s.id));
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleStaff = (id: number) =>
+    setStaffIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -49,7 +66,7 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
     if (!rows || rows.length === 0) return;
     setSaving(true);
     try {
-      const res = await post<{ created: number }>("/services/import", { services: rows });
+      const res = await post<{ created: number }>("/services/import", { services: rows, staff_ids: staffIds });
       notify(t("importDone", { n: res.created }));
       onImported();
       onClose();
@@ -84,6 +101,32 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted">{t("importFound", { n: rows.length })}</p>
+
+          {staff.length > 0 && (
+            <div className="rounded-xl border border-line bg-surface-2 p-3">
+              <p className="mb-2 text-sm font-medium text-ink">{t("importAssign")}</p>
+              <div className="flex flex-wrap gap-2">
+                {staff.map((m) => {
+                  const on = staffIds.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => toggleStaff(m.id)}
+                      aria-pressed={on}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        on ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted">{t("importAssignHint")}</p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2.5">
             {rows.map((row, i) => (
               <div key={i} className="rounded-xl border border-line bg-surface-2 p-3">
