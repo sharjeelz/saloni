@@ -250,6 +250,7 @@
       "importAnother": "Try another photo",
       "importAssign": "Who performs these?",
       "importAssignHint": "Applies to all imported services — adjust any service individually later.",
+      "importNoStaff": "No team members yet — you can add services now and assign staff later from the Team page.",
       "importAdd": "Add {n} services",
       "importDone": "Added {n} services."
     },
@@ -375,6 +376,8 @@
       "branchBody": "Set your location, address for directions, and working hours.",
       "serviceTitle": "Add your services",
       "serviceBody": "Type them in, or snap a photo of your menu to import.",
+      "readyTitle": "Go live for bookings",
+      "readyBody": "Assign your team to a branch and to their services, so customers see available times.",
       "go": "Start"
     }
   }

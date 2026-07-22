@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Salon;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\WorkingHour;
 use App\Support\Tenancy;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -68,12 +69,7 @@ class DashboardController extends Controller
         return response()->json([
             'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString(), 'timezone' => $tz],
             // Onboarding checklist state — drives the "get set up" guide on the dashboard.
-            'setup' => [
-                'has_staff' => User::where('role', 'staff')->exists(),
-                'has_branch' => Branch::exists(),
-                'has_service' => Service::exists(),
-                'slug' => $salon->slug,
-            ],
+            'setup' => $this->setupState($salon),
             'totals' => [
                 'bookings' => $appts->count(),
                 'by_status' => $byStatus,
@@ -88,5 +84,29 @@ class DashboardController extends Controller
             'by_service' => $byService,
             'upcoming' => $upcoming,
         ]);
+    }
+
+    /**
+     * Onboarding progress. Steps aren't sequential — an owner can do them in any
+     * order — but "bookable" is the real gate: a salon only takes bookings once
+     * a branch has hours and staff are assigned to both a branch and a service.
+     *
+     * @return array<string, mixed>
+     */
+    protected function setupState(Salon $salon): array
+    {
+        $hasHours = WorkingHour::exists();
+
+        return [
+            'has_staff' => User::where('role', 'staff')->exists(),
+            'has_branch' => Branch::exists(),
+            'has_hours' => $hasHours,
+            'has_service' => Service::exists(),
+            // Assignments are what actually make the booking page show slots.
+            'bookable' => $hasHours
+                && Branch::has('staff')->exists()
+                && Service::has('staff')->exists(),
+            'slug' => $salon->slug,
+        ];
     }
 }

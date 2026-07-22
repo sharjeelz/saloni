@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { get } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-type Setup = { has_staff: boolean; has_branch: boolean; has_service: boolean; slug: string };
+type Setup = { has_staff: boolean; has_branch: boolean; has_hours: boolean; has_service: boolean; bookable: boolean; slug: string };
 type Dashboard = {
   range: { from: string; to: string; timezone: string };
   setup: Setup;
@@ -120,7 +120,7 @@ export default function DashboardPage() {
   const maxStaff = Math.max(1, ...data.by_staff.map((s) => s.bookings));
   const maxService = Math.max(1, ...data.by_service.map((s) => s.bookings));
 
-  const setupDone = data.setup.has_staff && data.setup.has_branch && data.setup.has_service;
+  const setupDone = data.setup.bookable;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -225,8 +225,9 @@ function OnboardingChecklist({ setup }: { setup: Setup }) {
   const t = useTranslations("app.onboarding");
   const steps = [
     { done: setup.has_staff, href: "/staff", title: t("staffTitle"), body: t("staffBody") },
-    { done: setup.has_branch, href: "/branches", title: t("branchTitle"), body: t("branchBody") },
+    { done: setup.has_branch && setup.has_hours, href: "/branches", title: t("branchTitle"), body: t("branchBody") },
     { done: setup.has_service, href: "/services", title: t("serviceTitle"), body: t("serviceBody") },
+    { done: setup.bookable, href: "/branches", title: t("readyTitle"), body: t("readyBody") },
   ];
   const done = steps.filter((s) => s.done).length;
 

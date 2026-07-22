@@ -118,6 +118,10 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted">{t("importFound", { n: rows.length })}</p>
 
+          {staff.length === 0 && (
+            <p className="rounded-xl border border-line bg-surface-2 p-3 text-sm text-muted">{t("importNoStaff")}</p>
+          )}
+
           {staff.length > 0 && (
             <div className="rounded-xl border border-line bg-surface-2 p-3">
               <p className="mb-2 text-sm font-medium text-ink">{t("importAssign")}</p>
