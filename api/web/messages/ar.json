@@ -40,6 +40,7 @@
     "notFound": "صفحة الصالون غير متاحة.",
     "step": "الخطوة {n} من {total}",
     "chooseService": "اختر الخدمة",
+    "allServices": "الكل",
     "otherServices": "أخرى",
     "branch": "الفرع",
     "min": "دقيقة",
