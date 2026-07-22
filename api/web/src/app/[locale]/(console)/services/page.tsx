@@ -36,6 +36,7 @@ export default function ServicesPage() {
   const [addingCat, setAddingCat] = useState(false);
   const [staffFor, setStaffFor] = useState<Service | null>(null);
   const [importing, setImporting] = useState(false);
+  const [catFilter, setCatFilter] = useState<number | "all" | "none">("all");
 
   if (services.loading || categories.loading) return <Spinner />;
   if (services.error || !services.data || !categories.data) return <LoadError onRetry={services.reload} />;
@@ -116,9 +117,38 @@ export default function ServicesPage() {
       {/* Services */}
       {services.data.data.length === 0 ? (
         <EmptyState message={t("empty")} action={<Button onClick={() => setCreating(true)}>+ {t("add")}</Button>} />
-      ) : (
-        <div className="grid gap-3">
-          {services.data.data.map((s) => (
+      ) : (() => {
+        const cats = categories.data.data;
+        const hasUncat = services.data.data.some((s) => !s.service_category_id);
+        const shown = services.data.data.filter((s) =>
+          catFilter === "all" ? true
+          : catFilter === "none" ? !s.service_category_id
+          : s.service_category_id === catFilter);
+        const pill = (active: boolean, onClick: () => void, label: string, key: string) => (
+          <button
+            key={key}
+            onClick={onClick}
+            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              active ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"
+            }`}
+          >
+            {label}
+          </button>
+        );
+        return (
+        <>
+          {cats.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {pill(catFilter === "all", () => setCatFilter("all"), t("allServices"), "all")}
+              {cats.map((cat) => pill(catFilter === cat.id, () => setCatFilter(cat.id), catName(cat), String(cat.id)))}
+              {hasUncat && pill(catFilter === "none", () => setCatFilter("none"), t("otherServices"), "none")}
+            </div>
+          )}
+          {shown.length === 0 ? (
+            <p className="rounded-2xl border border-line bg-surface p-6 text-center text-sm text-muted">{t("noneInCategory")}</p>
+          ) : (
+          <div className="grid gap-3">
+          {shown.map((s) => (
             <Card key={s.id} className="flex flex-wrap items-center gap-3 p-5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -139,8 +169,11 @@ export default function ServicesPage() {
               <Button variant="ghost" onClick={() => setEditing(s)}>{c("edit")}</Button>
             </Card>
           ))}
-        </div>
-      )}
+          </div>
+          )}
+        </>
+        );
+      })()}
 
       {(creating || editing) && (
         <ServiceForm
