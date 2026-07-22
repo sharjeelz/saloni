@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
 
+        // Normalize phone inputs (strip spaces/dashes) before validation.
+        $middleware->api(prepend: [
+            \App\Http\Middleware\NormalizePhoneNumbers::class,
+        ]);
+
         // Set the tenant BEFORE route-model binding runs, so the
         // BelongsToSalon global scope isolates bound models (e.g. {branch}).
         $middleware->prependToPriorityList(

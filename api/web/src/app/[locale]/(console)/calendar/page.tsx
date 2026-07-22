@@ -278,7 +278,8 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
       });
       onSaved();
     } catch (err) {
-      notify(err instanceof ApiError && err.status === 409 ? err.message : c("error"), "error");
+      // Surface the real reason (e.g. slot taken, bad phone) instead of a generic message.
+      notify(err instanceof ApiError ? err.message : c("error"), "error");
       setBusy(false);
     }
   }
