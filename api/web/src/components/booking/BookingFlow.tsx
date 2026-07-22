@@ -154,7 +154,13 @@ export default function BookingFlow({ slug }: { slug: string }) {
   return (
     <div style={themeStyle} className="min-h-dvh bg-ground">
       <header className="mx-auto flex max-w-lg items-center justify-between px-5 py-4">
-        <span className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">{salon.name}</span>
+        <span className="flex items-center gap-2.5">
+          {salon.logo_path && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={salon.logo_path} alt="" className="size-9 rounded-lg object-contain" />
+          )}
+          <span className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">{salon.name}</span>
+        </span>
         <div className="flex items-center gap-3">
           {mode === "book" && step === 0 && (
             <button onClick={() => setMode("lookup")} className="text-sm font-medium text-accent-ink hover:underline">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ApiError, patch } from "@/lib/api";
+import { ApiError, patch, upload } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Card, Field, Input, LoadError, PageHeader, Select, Spinner } from "@/components/ui/kit";
@@ -21,9 +21,28 @@ export default function SettingsPage() {
   const { data, loading, error, reload } = useApi<{ data: Salon }>("/salon");
   const [form, setForm] = useState<Salon | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { if (data) setForm(data.data); }, [data]);
+
+  async function onLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("logo", file);
+      const res = await upload<{ logo_path: string }>("/salon/logo", fd);
+      setForm((f) => (f ? { ...f, logo_path: res.logo_path } : f));
+      notify(t("saved"));
+    } catch (e2) {
+      notify(e2 instanceof ApiError ? e2.message : c("error"), "error");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   if (loading || !form) {
     return error ? <LoadError onRetry={reload} /> : <Spinner />;
@@ -93,6 +112,28 @@ export default function SettingsPage() {
             </div>
           </Field>
           <p className="-mt-1 text-xs text-muted">{t("brandColorHint")}</p>
+
+          {/* Logo upload */}
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-ink">{t("logoUpload")}</span>
+            <div className="flex items-center gap-4">
+              <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-surface-2">
+                {form.logo_path ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={form.logo_path} alt="" className="size-full object-contain" />
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></svg>
+                )}
+              </span>
+              <label className="cursor-pointer">
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={onLogo} disabled={uploading} />
+                <span className="inline-flex items-center rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink hover:border-accent">
+                  {uploading ? t("uploading") : t("chooseImage")}
+                </span>
+              </label>
+            </div>
+            <p className="mt-1.5 text-xs text-muted">{t("logoHint")}</p>
+          </div>
 
           {err && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{err}</p>}
           <div className="mt-1 flex justify-end">
