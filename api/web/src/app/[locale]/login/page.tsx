@@ -60,7 +60,7 @@ export default function LoginPage() {
           }}
         />
         <span className="relative font-mono text-xs uppercase tracking-[0.28em] text-on-accent/70">
-          KSA · SaaS
+          We Wil handle the REST
         </span>
         <div className="relative">
           <div className="mb-6 h-px w-16 bg-[color:var(--color-gold)]" />

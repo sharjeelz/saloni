@@ -10,7 +10,7 @@ import {
   Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Spinner,
 } from "@/components/ui/kit";
 
-type Branch = { id: number; name: string; address: string | null; city: string | null; phone: string | null };
+type Branch = { id: number; name: string; address: string | null; city: string | null; maps_url: string | null; phone: string | null };
 type StaffLite = { id: number; name: string; title: string | null };
 type Hour = { weekday: number; start_time: string; end_time: string; user_id: number | null };
 
@@ -45,8 +45,15 @@ export default function BranchesPage() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">{b.name}</p>
                 <p className="text-sm text-muted">
-                  {[b.city, b.address].filter(Boolean).join(" · ") || "—"}
+                  {[b.address, b.city].filter(Boolean).join("، ") || "—"}
                 </p>
+                {b.maps_url && (
+                  <a href={b.maps_url} target="_blank" rel="noopener noreferrer"
+                    className="mt-0.5 inline-flex items-center gap-1 text-sm font-medium text-accent-ink hover:underline">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s-7-5.686-7-11a7 7 0 1114 0c0 5.314-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                    {t("viewMap")}
+                  </a>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" onClick={() => setHoursFor(b)}>{t("manageHours")}</Button>
@@ -79,7 +86,8 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
   const c = useTranslations("app.common");
   const { notify } = useToast();
   const [form, setForm] = useState({
-    name: branch?.name ?? "", city: branch?.city ?? "", address: branch?.address ?? "", phone: branch?.phone ?? "",
+    name: branch?.name ?? "", city: branch?.city ?? "", address: branch?.address ?? "",
+    maps_url: branch?.maps_url ?? "", phone: branch?.phone ?? "",
   });
   const [busy, setBusy] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -87,9 +95,10 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    const payload = { ...form, maps_url: form.maps_url.trim() || null };
     try {
-      if (branch) await patch(`/branches/${branch.id}`, form);
-      else await post("/branches", form);
+      if (branch) await patch(`/branches/${branch.id}`, payload);
+      else await post("/branches", payload);
       onSaved();
     } catch { notify(c("error"), "error"); setBusy(false); }
   }
@@ -102,11 +111,17 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
     <Modal open onClose={onClose} title={branch ? t("edit") : t("add")}>
       <form onSubmit={save} className="flex flex-col gap-4">
         <Field label={t("name")}><Input required value={form.name} onChange={set("name")} /></Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("city")}><Input value={form.city} onChange={set("city")} /></Field>
           <Field label={t("phone")}><Input dir="ltr" value={form.phone} onChange={set("phone")} /></Field>
         </div>
-        <Field label={t("address")}><Input value={form.address} onChange={set("address")} /></Field>
+        <Field label={t("address")}>
+          <Input value={form.address} placeholder={t("addressPlaceholder")} onChange={set("address")} />
+        </Field>
+        <Field label={t("mapsUrl")}>
+          <Input type="url" dir="ltr" value={form.maps_url} placeholder="https://maps.google.com/…" onChange={set("maps_url")} />
+        </Field>
+        <p className="-mt-2 text-xs text-muted">{t("mapsUrlHint")}</p>
         <div className="mt-1 flex items-center justify-between gap-2">
           {branch ? <Button type="button" variant="danger" onClick={remove}>{c("delete")}</Button> : <span />}
           <div className="flex gap-2">
@@ -158,16 +173,16 @@ function HoursModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
             const row = rows[d] ?? { open: false, start: "10:00", end: "22:00" };
             return (
               <div key={d} className="flex items-center gap-3">
-                <label className="flex w-24 items-center gap-2 text-sm text-ink">
+                <label className="flex w-20 shrink-0 items-center gap-2 text-sm text-ink">
                   <input type="checkbox" checked={row.open}
                     onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, open: e.target.checked } }))} />
                   {label}
                 </label>
                 {row.open ? (
-                  <div className="flex items-center gap-2" dir="ltr">
-                    <Input type="time" value={row.start} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, start: e.target.value } }))} className="w-28" />
+                  <div className="flex min-w-0 flex-1 items-center gap-2" dir="ltr">
+                    <Input type="time" value={row.start} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, start: e.target.value } }))} />
                     <span className="text-muted">–</span>
-                    <Input type="time" value={row.end} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, end: e.target.value } }))} className="w-28" />
+                    <Input type="time" value={row.end} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, end: e.target.value } }))} />
                   </div>
                 ) : <span className="text-sm text-muted">{t("closed")}</span>}
               </div>

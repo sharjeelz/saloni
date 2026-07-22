@@ -126,7 +126,7 @@ function StaffForm({ staff, onClose, onSaved }: {
         <Field label={t("phone")}>
           <Input required type="tel" inputMode="tel" dir="ltr" placeholder="+9665…" value={form.phone} onChange={set("phone")} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("role")}><Input value={form.title} onChange={set("title")} /></Field>
           <Field label={t("email")}><Input type="email" dir="ltr" value={form.email} onChange={set("email")} /></Field>
         </div>

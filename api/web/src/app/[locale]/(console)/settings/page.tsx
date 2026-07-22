@@ -83,7 +83,7 @@ export default function SettingsPage() {
       <Card className="p-6">
         <form onSubmit={save} className="flex flex-col gap-4">
           <Field label={t("name")}><Input required minLength={2} value={form.name} onChange={set("name")} /></Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={t("phone")}>
               <Input type="tel" dir="ltr" placeholder="+9665…" value={form.phone ?? ""} onChange={set("phone")} />
             </Field>
@@ -91,7 +91,7 @@ export default function SettingsPage() {
               <Input dir="ltr" value={form.vat_number ?? ""} onChange={set("vat_number")} />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={t("timezone")}>
               <Select value={form.timezone} onChange={set("timezone")}>
                 {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}

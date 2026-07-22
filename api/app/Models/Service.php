@@ -12,7 +12,7 @@ class Service extends Model
     use BelongsToSalon;
 
     protected $fillable = [
-        'salon_id', 'service_category_id', 'name', 'description',
+        'salon_id', 'service_category_id', 'name', 'name_en', 'description',
         'duration_min', 'price', 'currency', 'is_active',
     ];
 

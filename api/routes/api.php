@@ -113,11 +113,15 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::put('/branches/{branch}/hours', [WorkingHourController::class, 'sync']);
 
         // Service categories
+        Route::get('/service-category-presets', [ServiceCategoryController::class, 'presets']);
+        Route::put('/service-categories/reorder', [ServiceCategoryController::class, 'reorder']);
         Route::post('/service-categories', [ServiceCategoryController::class, 'store']);
         Route::patch('/service-categories/{serviceCategory}', [ServiceCategoryController::class, 'update']);
         Route::delete('/service-categories/{serviceCategory}', [ServiceCategoryController::class, 'destroy']);
 
         // Services + staff assignment
+        Route::post('/services/scan-menu', [ServiceController::class, 'scanMenu']);
+        Route::post('/services/import', [ServiceController::class, 'import']);
         Route::post('/services', [ServiceController::class, 'store']);
         Route::patch('/services/{service}', [ServiceController::class, 'update']);
         Route::delete('/services/{service}', [ServiceController::class, 'destroy']);

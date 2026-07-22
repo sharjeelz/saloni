@@ -91,7 +91,8 @@
     "yourBookings": "Your upcoming bookings",
     "noBookings": "No upcoming bookings for this number.",
     "manageThis": "Manage",
-    "backToBook": "Book a new appointment"
+    "backToBook": "Book a new appointment",
+    "directions": "Get directions"
   },
   "app": {
     "brand": "Salooni",
@@ -190,7 +191,9 @@
       "confirmDelete": "Delete this? This can't be undone.",
       "saved": "Saved.",
       "deleted": "Deleted.",
-      "error": "Couldn't save. Please try again."
+      "error": "Couldn't save. Please try again.",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
     },
     "branches": {
       "title": "Branches",
@@ -198,6 +201,10 @@
       "edit": "Edit branch",
       "name": "Branch name",
       "address": "Address",
+      "addressPlaceholder": "e.g. 1234 Qurtubah, Riyadh",
+      "mapsUrl": "Map link (optional)",
+      "mapsUrlHint": "Paste a Google Maps link to your salon — customers tap it for directions.",
+      "viewMap": "View on map",
       "city": "City",
       "phone": "Phone",
       "empty": "No branches yet. Add your first location.",
@@ -229,7 +236,31 @@
       "performedBy": "Performed by",
       "noneYet": "Not set",
       "noStaffYet": "No staff yet — invite your team first.",
-      "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff)."
+      "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff).",
+      "nameEn": "English name (optional)",
+      "nameEnPlaceholder": "Shown to customers browsing in English",
+      "nameArabic": "Name (Arabic)",
+      "nameEnglish": "Name (English)",
+      "nameBilingualHint": "Each customer sees the name in their language. Fill in either or both.",
+      "nameRequired": "Enter a name in Arabic or English.",
+      "presetPick": "Quick pick a standard category:",
+      "allServices": "All",
+      "otherServices": "Uncategorized",
+      "noneInCategory": "No services in this category yet.",
+      "importMenu": "Import from menu",
+      "importTitle": "Import from your menu",
+      "importIntro": "Upload a photo of your price list — we'll read the services so you can review and add them.",
+      "importBilingual": "Arabic, English, or both — you can add more than one photo and we'll match them up.",
+      "importChoose": "Choose photo(s)",
+      "scanning": "Reading your menu…",
+      "importFound": "Found {n} services. Edit anything, remove what you don't want, then add them.",
+      "importEmpty": "We couldn't find any services on that image — try a clearer photo.",
+      "importAnother": "Try another photo",
+      "importAssign": "Who performs these?",
+      "importAssignHint": "Applies to all imported services — adjust any service individually later.",
+      "importNoStaff": "No team members yet — you can add services now and assign staff later from the Team page.",
+      "importAdd": "Add {n} services",
+      "importDone": "Added {n} services."
     },
     "staff": {
       "title": "Team",
@@ -343,6 +374,19 @@
       "loadError": "Couldn't load your dashboard.",
       "retry": "Try again",
       "with": "with"
+    },
+    "onboarding": {
+      "title": "Get your salon ready",
+      "subtitle": "A few quick steps and you can start taking bookings.",
+      "staffTitle": "Add your team",
+      "staffBody": "Invite the staff who'll take appointments.",
+      "branchTitle": "Add your branch & hours",
+      "branchBody": "Set your location, address for directions, and working hours.",
+      "serviceTitle": "Add your services",
+      "serviceBody": "Type them in, or snap a photo of your menu to import.",
+      "readyTitle": "Go live for bookings",
+      "readyBody": "Assign your team to a branch and to their services, so customers see available times.",
+      "go": "Start"
     }
   }
 }

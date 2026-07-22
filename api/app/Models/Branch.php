@@ -12,7 +12,7 @@ class Branch extends Model
     use BelongsToSalon;
 
     protected $fillable = [
-        'salon_id', 'name', 'address', 'city', 'phone', 'lat', 'lng', 'is_active',
+        'salon_id', 'name', 'address', 'city', 'maps_url', 'phone', 'lat', 'lng', 'is_active',
     ];
 
     protected function casts(): array

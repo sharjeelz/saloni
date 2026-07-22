@@ -10,7 +10,7 @@ class ServiceCategory extends Model
 {
     use BelongsToSalon;
 
-    protected $fillable = ['salon_id', 'name', 'sort_order'];
+    protected $fillable = ['salon_id', 'name', 'name_en', 'sort_order'];
 
     public function services(): HasMany
     {

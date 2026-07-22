@@ -49,7 +49,7 @@ class PublicBookingController extends Controller
 
         return response()->json([
             'data' => Branch::where('is_active', true)->orderBy('name')
-                ->get(['id', 'name', 'address', 'city']),
+                ->get(['id', 'name', 'address', 'city', 'maps_url', 'lat', 'lng']),
         ]);
     }
 
@@ -58,7 +58,7 @@ class PublicBookingController extends Controller
         $this->pin($salon);
 
         return response()->json([
-            'data' => Service::with(['category:id,name,sort_order', 'staff:id,name,title'])
+            'data' => Service::with(['category:id,name,name_en,sort_order', 'staff:id,name,title'])
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(),
