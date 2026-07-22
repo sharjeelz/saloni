@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { ApiError, patch, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/Modal";
 import {
   Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Spinner,
@@ -19,6 +20,7 @@ export default function StaffPage() {
   const t = useTranslations("app.staff");
   const c = useTranslations("app.common");
   const { notify } = useToast();
+  const confirm = useConfirm();
   const { data, loading, error, reload } = useApi<{ data: Staff[] }>("/staff");
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
@@ -28,7 +30,7 @@ export default function StaffPage() {
 
   async function setActive(s: Staff, active: boolean) {
     const verb = active ? t("reactivate") : t("deactivate");
-    if (!confirm(`${verb} — ${s.name}?`)) return;
+    if (!(await confirm({ title: verb, message: `${verb} — ${s.name}?`, confirmLabel: verb, variant: active ? "primary" : "danger" }))) return;
     try {
       await patch(`/staff/${s.id}/${active ? "activate" : "deactivate"}`);
       reload();
@@ -53,8 +55,8 @@ export default function StaffPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">{s.name}</p>
-                <p className="text-sm text-muted" dir="ltr">
-                  {[s.title, s.phone].filter(Boolean).join(" · ") || "—"}
+                <p className="text-sm text-muted">
+                  {s.title ? `${s.title} · ` : ""}<span dir="ltr">{s.phone}</span>{!s.title && !s.phone ? "—" : ""}
                 </p>
               </div>
               <Badge tone={s.is_active ? "accent" : "muted"}>

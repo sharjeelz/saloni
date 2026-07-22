@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { del, get, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/Modal";
 import { MenuImportModal } from "@/components/services/MenuImportModal";
 import {
@@ -221,6 +222,7 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
   const catName = (cat: { name: string; name_en?: string | null }) =>
     locale === "en" && cat.name_en ? cat.name_en : cat.name;
   const { notify } = useToast();
+  const confirm = useConfirm();
   const [form, setForm] = useState({
     name: service?.name ?? "",
     name_en: service?.name_en ?? "",
@@ -251,7 +253,7 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
     } catch { notify(c("error"), "error"); setBusy(false); }
   }
   async function remove() {
-    if (!service || !confirm(c("confirmDelete"))) return;
+    if (!service || !(await confirm({ title: c("delete"), message: c("confirmDelete"), confirmLabel: c("delete") }))) return;
     try { await del(`/services/${service.id}`); onDeleted(); } catch { notify(c("error"), "error"); }
   }
 
@@ -301,6 +303,7 @@ function CategoryForm({ category, onClose, onSaved, onDeleted }: {
   const c = useTranslations("app.common");
   const locale = useLocale();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const [name, setName] = useState(category?.name ?? "");
   const [nameEn, setNameEn] = useState(category?.name_en ?? "");
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -326,7 +329,7 @@ function CategoryForm({ category, onClose, onSaved, onDeleted }: {
     } catch { notify(c("error"), "error"); setBusy(false); }
   }
   async function remove() {
-    if (!category || !confirm(c("confirmDelete"))) return;
+    if (!category || !(await confirm({ title: c("delete"), message: c("confirmDelete"), confirmLabel: c("delete") }))) return;
     try { await del(`/service-categories/${category.id}`); onDeleted(); } catch { notify(c("error"), "error"); }
   }
 

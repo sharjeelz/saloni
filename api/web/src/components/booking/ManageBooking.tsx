@@ -6,6 +6,7 @@ import { ApiError, get, post } from "@/lib/api";
 import { Link } from "@/i18n/navigation";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { Badge, Button, Spinner } from "@/components/ui/kit";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Booking = {
   reference: string;
@@ -38,6 +39,7 @@ export default function ManageBooking({ token }: { token: string }) {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -78,8 +80,8 @@ export default function ManageBooking({ token }: { token: string }) {
   const statusLabel = (s: string) =>
     ({ confirmed: t("statusConfirmed"), pending: t("statusPending"), done: t("statusDone"), no_show: t("statusNoShow"), cancelled: t("statusCancelled") } as Record<string, string>)[s] ?? s;
 
-  async function cancel() {
-    if (!confirm(t("cancelConfirm"))) return;
+  async function doCancel() {
+    setConfirmingCancel(false);
     setBusy(true); setError(null);
     try { await post(`/book/manage/${token}/cancel`); load(); }
     catch (e) { setError(e instanceof ApiError ? e.message : t("genericError")); }
@@ -141,7 +143,7 @@ export default function ManageBooking({ token }: { token: string }) {
               <p className="text-sm text-muted">{t("with")} {b.staff?.name}</p>
               <p className="mt-2 text-ink">{whenLabel(b.starts_at)}</p>
               {b.branch?.name && <p className="text-sm text-muted">{b.branch.name}</p>}
-              <p className="mt-3 font-mono text-xs text-muted" dir="ltr">{t("reference")}: {b.reference}</p>
+              <p className="mt-3 font-mono text-xs text-muted">{t("reference")}: <span dir="ltr">{b.reference}</span></p>
             </div>
 
             {error && <p className="mt-4 rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
@@ -183,7 +185,7 @@ export default function ManageBooking({ token }: { token: string }) {
             ) : canChange ? (
               <div className="mt-6 flex gap-2">
                 <Button variant="ghost" className="flex-1" onClick={() => setRescheduling(true)}>{t("reschedule")}</Button>
-                <Button variant="danger" className="flex-1" disabled={busy} onClick={cancel}>{t("cancel")}</Button>
+                <Button variant="danger" className="flex-1" disabled={busy} onClick={() => setConfirmingCancel(true)}>{t("cancel")}</Button>
               </div>
             ) : (
               <p className="mt-6 text-center text-sm text-muted">{t("cannotChange")}</p>
@@ -193,6 +195,17 @@ export default function ManageBooking({ token }: { token: string }) {
 
         <p className="mt-10 text-center font-mono text-[11px] uppercase tracking-widest text-muted/70">{t("poweredBy")}</p>
       </main>
+
+      <ConfirmDialog
+        open={confirmingCancel}
+        title={t("cancel")}
+        message={t("cancelConfirm")}
+        confirmLabel={t("cancel")}
+        cancelLabel={t("keep")}
+        busy={busy}
+        onConfirm={doCancel}
+        onClose={() => setConfirmingCancel(false)}
+      />
     </div>
   );
 }

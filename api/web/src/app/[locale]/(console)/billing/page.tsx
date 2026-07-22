@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/confirm";
 import { Badge, Button, Card, LoadError, PageHeader, Spinner } from "@/components/ui/kit";
 
 type Status = {
@@ -26,6 +27,7 @@ export default function BillingPage() {
   const c = useTranslations("app.common");
   const locale = useLocale();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const status = useApi<Status>("/billing");
   const plans = useApi<{ data: Plan[] }>("/billing/plans");
   const invoices = useApi<{ data: Invoice[] }>("/billing/invoices");
@@ -54,7 +56,7 @@ export default function BillingPage() {
   }
 
   async function cancel() {
-    if (!confirm(t("confirmCancel"))) return;
+    if (!(await confirm({ title: t("cancel"), message: t("confirmCancel"), confirmLabel: t("cancel") }))) return;
     setBusy("__cancel");
     try {
       await post("/billing/cancel");

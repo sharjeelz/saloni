@@ -6,6 +6,7 @@ import { del, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/Modal";
 import {
   Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Select, Spinner,
@@ -24,6 +25,7 @@ export default function TimeOffPage() {
   const { salon } = useAuth();
   const tz = salon?.timezone;
   const { notify } = useToast();
+  const confirm = useConfirm();
   const blocks = useApi<{ data: Block[] }>("/time-off");
   const branches = useApi<{ data: Named[] }>("/branches");
   const staff = useApi<{ data: Named[] }>("/staff");
@@ -45,7 +47,7 @@ export default function TimeOffPage() {
     new Intl.DateTimeFormat(locale, { timeZone: tz, day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
   async function remove(b: Block) {
-    if (!confirm(c("confirmDelete"))) return;
+    if (!(await confirm({ title: c("delete"), message: c("confirmDelete"), confirmLabel: c("delete") }))) return;
     try { await del(`/time-off/${b.id}`); blocks.reload(); notify(c("deleted")); }
     catch { notify(c("error"), "error"); }
   }
@@ -71,8 +73,8 @@ export default function TimeOffPage() {
                     <Badge tone="warn">{t("closure")}</Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted" dir="ltr">
-                  {day(b.starts_at)} – {day(b.ends_at)}{b.reason ? ` · ${b.reason}` : ""}
+                <p className="text-sm text-muted">
+                  <span dir="ltr">{day(b.starts_at)} – {day(b.ends_at)}</span>{b.reason ? ` · ${b.reason}` : ""}
                 </p>
               </div>
               <Button variant="danger" onClick={() => remove(b)}>{c("delete")}</Button>

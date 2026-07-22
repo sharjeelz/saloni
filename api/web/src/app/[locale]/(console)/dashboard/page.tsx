@@ -203,8 +203,8 @@ export default function DashboardPage() {
                 {data.upcoming.map((a) => (
                   <tr key={a.id} className="border-b border-line last:border-0">
                     <td className="whitespace-nowrap py-2.5 pe-4 text-muted">{day(a.starts_at, data.range.timezone)}</td>
-                    <td className="whitespace-nowrap py-2.5 pe-4 font-mono text-accent-ink tnum" dir="ltr">
-                      {time(a.starts_at, data.range.timezone)}
+                    <td className="whitespace-nowrap py-2.5 pe-4 font-mono text-accent-ink tnum">
+                      <span dir="ltr">{time(a.starts_at, data.range.timezone)}</span>
                     </td>
                     <td className="py-2.5 pe-4 font-medium text-ink">{a.customer?.name}</td>
                     <td className="py-2.5 text-muted">

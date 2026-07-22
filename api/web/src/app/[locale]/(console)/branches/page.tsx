@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { del, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/Modal";
 import {
   Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Spinner,
@@ -85,6 +86,7 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
   const t = useTranslations("app.branches");
   const c = useTranslations("app.common");
   const { notify } = useToast();
+  const confirm = useConfirm();
   const [form, setForm] = useState({
     name: branch?.name ?? "", city: branch?.city ?? "", address: branch?.address ?? "",
     maps_url: branch?.maps_url ?? "", phone: branch?.phone ?? "",
@@ -103,7 +105,7 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
     } catch { notify(c("error"), "error"); setBusy(false); }
   }
   async function remove() {
-    if (!branch || !confirm(c("confirmDelete"))) return;
+    if (!branch || !(await confirm({ title: c("delete"), message: c("confirmDelete"), confirmLabel: c("delete") }))) return;
     try { await del(`/branches/${branch.id}`); onDeleted(); } catch { notify(c("error"), "error"); }
   }
 
