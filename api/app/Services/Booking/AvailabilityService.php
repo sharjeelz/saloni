@@ -85,6 +85,69 @@ class AvailabilityService
         ));
     }
 
+    /**
+     * When slots() returns nothing, explain why so the booking page can show a
+     * meaningful message instead of a generic "no times available":
+     *   'no_staff' — no specialist performs this service at this branch
+     *   'closed'   — the branch isn't open that day (not scheduled, or a
+     *                whole-branch closure blankets its hours)
+     *   'off'      — the branch is open but the specialist(s) are on time-off
+     *   'full'     — open and staffed, but every slot is booked or in the past
+     */
+    public function reasonForNoSlots(Branch $branch, Service $service, ?int $staffId, string $date): string
+    {
+        $tz = $branch->salon->timezone ?? 'Asia/Riyadh';
+        $day = Carbon::createFromFormat('Y-m-d', $date, $tz)->startOfDay();
+        $weekday = (int) $day->dayOfWeek;
+
+        $staff = $this->eligibleStaff($branch, $service, $staffId);
+        if ($staff->isEmpty()) {
+            return 'no_staff';
+        }
+
+        $closures = $this->timeOffIntervals($branch->id, null, $day, $tz);
+
+        $anyWindow = false;   // a shift is scheduled today at all
+        $anyOpen = false;     // a shift window survives the branch closure
+        $anyFree = false;     // a shift window survives closure + that staff's own time-off
+
+        foreach ($staff as $member) {
+            $windows = $this->workingWindows($branch->id, $member->id, $weekday, $day, $tz);
+            if (empty($windows)) {
+                continue;
+            }
+            $anyWindow = true;
+            $off = $this->timeOffIntervals($branch->id, $member->id, $day, $tz);
+
+            foreach ($windows as [$wStart, $wEnd]) {
+                if (! $this->windowCovered($wStart, $wEnd, $closures)) {
+                    $anyOpen = true;
+                }
+                if (! $this->windowCovered($wStart, $wEnd, array_merge($closures, $off))) {
+                    $anyFree = true;
+                }
+            }
+        }
+
+        if (! $anyWindow || ! $anyOpen) {
+            return 'closed';
+        }
+
+        return $anyFree ? 'full' : 'off';
+    }
+
+    /** True when [start, end) is fully contained in a single busy interval. */
+    protected function windowCovered(Carbon $start, Carbon $end, array $intervals): bool
+    {
+        foreach ($intervals as [$bStart, $bEnd]) {
+            if ($bStart->lessThanOrEqualTo($start) && $bEnd->greaterThanOrEqualTo($end)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Staff who can perform this service AND work at this branch. */
     protected function eligibleStaff(Branch $branch, Service $service, ?int $staffId): Collection
     {
