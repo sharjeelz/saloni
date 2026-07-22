@@ -1,0 +1,129 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ApiError, post, upload } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { Modal } from "@/components/ui/Modal";
+import { Button, Input, Spinner } from "@/components/ui/kit";
+
+type Row = { name: string; duration_min: number; price: number; category: string | null };
+
+/**
+ * Onboarding shortcut: the owner uploads a photo of their price list, Claude
+ * extracts the services, and they review/edit before anything is saved.
+ * Turns a long data-entry form into a five-minute favour.
+ */
+export function MenuImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
+  const t = useTranslations("app.services");
+  const c = useTranslations("app.common");
+  const { notify } = useToast();
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanning(true);
+    try {
+      const fd = new FormData();
+      fd.append("menu", file);
+      const res = await upload<{ services: Row[] }>("/services/scan-menu", fd);
+      setRows(res.services);
+      if (res.services.length === 0) notify(t("importEmpty"), "error");
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : c("error"), "error");
+    } finally {
+      setScanning(false);
+      e.target.value = "";
+    }
+  }
+
+  const update = (i: number, patch: Partial<Row>) =>
+    setRows((r) => (r ? r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)) : r));
+  const remove = (i: number) => setRows((r) => (r ? r.filter((_, idx) => idx !== i) : r));
+
+  async function save() {
+    if (!rows || rows.length === 0) return;
+    setSaving(true);
+    try {
+      const res = await post<{ created: number }>("/services/import", { services: rows });
+      notify(t("importDone", { n: res.created }));
+      onImported();
+      onClose();
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : c("error"), "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t("importTitle")}>
+      {rows === null ? (
+        <div className="flex flex-col items-center gap-4 py-6 text-center">
+          {scanning ? (
+            <>
+              <Spinner inline />
+              <p className="text-sm text-muted">{t("scanning")}</p>
+            </>
+          ) : (
+            <>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" strokeWidth="1.4">
+                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" />
+              </svg>
+              <p className="max-w-xs text-sm text-muted">{t("importIntro")}</p>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFile} />
+              <Button type="button" onClick={() => fileRef.current?.click()}>{t("importChoose")}</Button>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted">{t("importFound", { n: rows.length })}</p>
+          <div className="flex flex-col gap-2.5">
+            {rows.map((row, i) => (
+              <div key={i} className="rounded-xl border border-line bg-surface-2 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Input value={row.name} onChange={(e) => update(i, { name: e.target.value })} className="flex-1" />
+                  <button
+                    onClick={() => remove(i)}
+                    aria-label={c("delete")}
+                    className="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-crit/10 hover:text-crit"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs text-muted">{t("duration")}</span>
+                    <Input type="number" dir="ltr" min={5} value={row.duration_min}
+                      onChange={(e) => update(i, { duration_min: Number(e.target.value) })} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs text-muted">{t("price")}</span>
+                    <Input type="number" dir="ltr" min={0} value={row.price}
+                      onChange={(e) => update(i, { price: Number(e.target.value) })} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs text-muted">{t("category")}</span>
+                    <Input value={row.category ?? ""} placeholder={t("noCategory")}
+                      onChange={(e) => update(i, { category: e.target.value || null })} />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <Button type="button" variant="ghost" onClick={() => setRows(null)}>{t("importAnother")}</Button>
+            <Button type="button" onClick={save} disabled={saving || rows.length === 0}>
+              {saving ? c("saving") : t("importAdd", { n: rows.length })}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}

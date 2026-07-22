@@ -37,4 +37,12 @@ return [
 
     // SMS gateway configuration lives in config/sms.php.
 
+    // Anthropic API — powers AI menu onboarding (scan a menu photo → services).
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'base_url' => env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),
+        'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
+        'menu_model' => env('ANTHROPIC_MENU_MODEL', 'claude-sonnet-5'),
+    ],
+
 ];

@@ -9,6 +9,8 @@ use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -148,5 +150,76 @@ class CatalogTest extends TestCase
         Sanctum::actingAs($ownerA);
         $this->putJson("/api/branches/{$branchA->id}/staff", ['staff_ids' => [$staffB->id]])
             ->assertStatus(422);
+    }
+
+    // ---- E13-1: AI menu onboarding ------------------------------------------
+
+    public function test_owner_scans_a_menu_photo_into_a_service_preview(): void
+    {
+        [, $owner] = $this->salon();
+        Sanctum::actingAs($owner);
+        config(['services.anthropic.key' => 'test-key']);
+
+        Http::fake([
+            '*/v1/messages' => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'record_services',
+                    'input' => ['services' => [
+                        ['name' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
+                        ['name' => 'Manicure', 'price' => 60, 'category' => 'Nails'], // no duration → default
+                    ]],
+                ]],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/services/scan-menu', ['menu' => UploadedFile::fake()->image('menu.jpg')])
+            ->assertOk()
+            ->assertJsonCount(2, 'services')
+            ->assertJsonPath('services.0.name', 'Haircut')
+            ->assertJsonPath('services.0.category', 'Hair')
+            ->assertJsonPath('services.1.duration_min', 30); // sensibly defaulted
+
+        // Nothing is saved by scanning — it's a preview only.
+        $this->assertDatabaseCount('services', 0);
+    }
+
+    public function test_scan_returns_422_when_ai_is_not_configured(): void
+    {
+        [, $owner] = $this->salon();
+        Sanctum::actingAs($owner);
+        config(['services.anthropic.key' => null]);
+
+        $this->postJson('/api/services/scan-menu', ['menu' => UploadedFile::fake()->image('m.jpg')])
+            ->assertStatus(422);
+    }
+
+    public function test_owner_imports_reviewed_services_creating_categories_in_order(): void
+    {
+        [$salon, $owner] = $this->salon();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/services/import', ['services' => [
+            ['name' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
+            ['name' => 'Beard trim', 'duration_min' => 15, 'price' => 20, 'category' => 'Hair'],
+            ['name' => 'Manicure', 'duration_min' => 45, 'price' => 60, 'category' => 'Nails'],
+            ['name' => 'Quick wash', 'duration_min' => 10, 'price' => 10, 'category' => null],
+        ]])->assertCreated()->assertJsonPath('created', 4);
+
+        // Two categories (Hair deduped), in menu order; four active services.
+        $this->assertDatabaseCount('service_categories', 2);
+        $this->assertDatabaseCount('services', 4);
+        $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Hair', 'sort_order' => 0]);
+        $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Nails', 'sort_order' => 1]);
+    }
+
+    public function test_menu_import_is_owner_only(): void
+    {
+        [, , $staff] = $this->salon();
+        Sanctum::actingAs($staff);
+
+        $this->postJson('/api/services/import', ['services' => [
+            ['name' => 'X', 'duration_min' => 30, 'price' => 40],
+        ]])->assertForbidden();
     }
 }

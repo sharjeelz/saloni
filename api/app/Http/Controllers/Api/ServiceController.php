@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Service;
+use App\Models\ServiceCategory;
+use App\Services\Onboarding\MenuScanner;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
 class ServiceController extends Controller
 {
@@ -48,6 +51,79 @@ class ServiceController extends Controller
         $service->delete();
 
         return response()->json(['message' => 'Service deleted.']);
+    }
+
+    /**
+     * Read a photo of the salon's price list and return a *preview* list of
+     * services (E13-1). Nothing is saved — the owner reviews it, then calls
+     * import(). Keeps setup to a 5-minute favour instead of a long form.
+     */
+    public function scanMenu(Request $request, MenuScanner $scanner): JsonResponse
+    {
+        $request->validate([
+            'menu' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+        ]);
+
+        $file = $request->file('menu');
+
+        try {
+            $services = $scanner->scan(
+                base64_encode((string) file_get_contents($file->getRealPath())),
+                $file->getMimeType(),
+            );
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['services' => $services]);
+    }
+
+    /**
+     * Create services (and any missing categories) from a reviewed menu import
+     * (E13-1). Categories are matched by name within the salon and created in
+     * menu order; services are added active.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'services' => ['required', 'array', 'min:1', 'max:200'],
+            'services.*.name' => ['required', 'string', 'max:255'],
+            'services.*.duration_min' => ['required', 'integer', 'min:5', 'max:600'],
+            'services.*.price' => ['required', 'numeric', 'min:0'],
+            'services.*.category' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $categoryIds = [];                                          // lowercased name => id
+        $nextSort = (int) (ServiceCategory::max('sort_order') ?? -1) + 1;
+        $created = 0;
+
+        foreach ($data['services'] as $row) {
+            $categoryId = null;
+            $catName = trim((string) ($row['category'] ?? ''));
+
+            if ($catName !== '') {
+                $key = mb_strtolower($catName);
+                if (! isset($categoryIds[$key])) {
+                    $cat = ServiceCategory::firstOrCreate(['name' => $catName], ['sort_order' => $nextSort]);
+                    if ($cat->wasRecentlyCreated) {
+                        $nextSort++;
+                    }
+                    $categoryIds[$key] = $cat->id;
+                }
+                $categoryId = $categoryIds[$key];
+            }
+
+            Service::create([
+                'name' => $row['name'],
+                'duration_min' => $row['duration_min'],
+                'price' => $row['price'],
+                'service_category_id' => $categoryId,
+                'is_active' => true,
+            ]);
+            $created++;
+        }
+
+        return response()->json(['created' => $created], 201);
     }
 
     /**

@@ -7,6 +7,7 @@ import { del, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
+import { MenuImportModal } from "@/components/services/MenuImportModal";
 import {
   Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Select, Spinner,
 } from "@/components/ui/kit";
@@ -33,6 +34,7 @@ export default function ServicesPage() {
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [addingCat, setAddingCat] = useState(false);
   const [staffFor, setStaffFor] = useState<Service | null>(null);
+  const [importing, setImporting] = useState(false);
 
   if (services.loading || categories.loading) return <Spinner />;
   if (services.error || !services.data || !categories.data) return <LoadError onRetry={services.reload} />;
@@ -45,6 +47,7 @@ export default function ServicesPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("title")}>
+        <Button variant="ghost" onClick={() => setImporting(true)}>{t("importMenu")}</Button>
         <Button onClick={() => setCreating(true)}>+ {t("add")}</Button>
       </PageHeader>
 
@@ -126,6 +129,12 @@ export default function ServicesPage() {
       {staffFor && (
         <ServiceStaffModal service={staffFor} onClose={() => setStaffFor(null)}
           onSaved={() => { setStaffFor(null); services.reload(); notify(c("saved")); }} />
+      )}
+      {importing && (
+        <MenuImportModal
+          onClose={() => setImporting(false)}
+          onImported={() => { services.reload(); categories.reload(); }}
+        />
       )}
     </div>
   );

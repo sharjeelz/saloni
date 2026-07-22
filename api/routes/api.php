@@ -118,6 +118,8 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::delete('/service-categories/{serviceCategory}', [ServiceCategoryController::class, 'destroy']);
 
         // Services + staff assignment
+        Route::post('/services/scan-menu', [ServiceController::class, 'scanMenu']);
+        Route::post('/services/import', [ServiceController::class, 'import']);
         Route::post('/services', [ServiceController::class, 'store']);
         Route::patch('/services/{service}', [ServiceController::class, 'update']);
         Route::delete('/services/{service}', [ServiceController::class, 'destroy']);

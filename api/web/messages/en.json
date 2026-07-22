@@ -229,7 +229,17 @@
       "performedBy": "Performed by",
       "noneYet": "Not set",
       "noStaffYet": "No staff yet — invite your team first.",
-      "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff)."
+      "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff).",
+      "importMenu": "Import from menu",
+      "importTitle": "Import from your menu",
+      "importIntro": "Upload a photo of your price list — we'll read the services so you can review and add them.",
+      "importChoose": "Choose a photo",
+      "scanning": "Reading your menu…",
+      "importFound": "Found {n} services. Edit anything, remove what you don't want, then add them.",
+      "importEmpty": "We couldn't find any services on that image — try a clearer photo.",
+      "importAnother": "Try another photo",
+      "importAdd": "Add {n} services",
+      "importDone": "Added {n} services."
     },
     "staff": {
       "title": "Team",
