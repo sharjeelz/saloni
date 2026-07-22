@@ -58,7 +58,7 @@ class PublicBookingController extends Controller
         $this->pin($salon);
 
         return response()->json([
-            'data' => Service::with(['category:id,name', 'staff:id,name,title'])
+            'data' => Service::with(['category:id,name,sort_order', 'staff:id,name,title'])
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(),

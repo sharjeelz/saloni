@@ -7,6 +7,7 @@ use App\Models\Salon;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SalonSettingsController extends Controller
 {
@@ -27,10 +28,34 @@ class SalonSettingsController extends Controller
             'logo_path' => ['nullable', 'string', 'max:2048'],
             'timezone' => ['sometimes', 'string', 'max:64'],
             'locale' => ['sometimes', 'string', 'in:ar,en'],
+            'notification_channel' => ['sometimes', 'string', 'in:sms,whatsapp'],
         ]);
 
         $salon->update($data);
 
         return response()->json(['data' => $salon]);
     }
+
+    /** Upload the salon logo (shown on the public booking page). */
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048'],
+        ]);
+
+        $salon = Salon::findOrFail(Tenancy::id());
+
+        // Replace any previous upload.
+        if ($salon->logo_path && str_contains($salon->logo_path, '/storage/logos/')) {
+            $old = 'logos/' . basename($salon->logo_path);
+            Storage::disk('public')->delete($old);
+        }
+
+        $path = $request->file('logo')->store('logos', 'public');
+        $url = Storage::disk('public')->url($path);
+        $salon->update(['logo_path' => $url]);
+
+        return response()->json(['logo_path' => $url]);
+    }
 }
+

@@ -2,7 +2,9 @@
 
 namespace App\Services\Sms;
 
-interface SmsSender
+use App\Services\Messaging\MessageChannel;
+
+interface SmsSender extends MessageChannel
 {
     /**
      * Send an SMS. Returns true on success.

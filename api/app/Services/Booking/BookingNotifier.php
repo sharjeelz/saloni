@@ -3,17 +3,24 @@
 namespace App\Services\Booking;
 
 use App\Models\Appointment;
+use App\Models\Salon;
 use App\Models\User;
+use App\Services\Messaging\MessageChannel;
 use App\Services\Sms\SmsSender;
+use App\Services\WhatsApp\WhatsAppSender;
 
 /**
  * All booking-related messaging in one place: the customer's confirmation and
  * reminder, and the owner's new-booking alert. Messages render in the salon's
- * timezone. The active SMS gateway (or the log driver) does the delivery.
+ * timezone and go out on the salon's preferred channel (SMS or WhatsApp);
+ * the active gateway (or the log driver) does the delivery.
  */
 class BookingNotifier
 {
-    public function __construct(protected SmsSender $sms) {}
+    public function __construct(
+        protected SmsSender $sms,
+        protected WhatsAppSender $whatsapp,
+    ) {}
 
     /** Confirmation to the customer right after booking (E8-1). */
     public function confirmation(Appointment $appointment): void
@@ -21,11 +28,17 @@ class BookingNotifier
         $appointment->loadMissing('salon', 'service', 'staff', 'customer');
         $salon = $appointment->salon;
 
-        $this->sms->send(
+        $this->channel($salon)->send(
             $appointment->customer->phone,
             "{$salon->name}: your {$appointment->service->name} with {$appointment->staff->name} "
-            . "is confirmed for {$this->when($appointment)}. Ref {$appointment->public_token}.",
+            . "is confirmed for {$this->when($appointment)}. Ref {$appointment->reference}.",
         );
+    }
+
+    /** The channel this salon has chosen for booking notifications. */
+    protected function channel(Salon $salon): MessageChannel
+    {
+        return $salon->notification_channel === 'whatsapp' ? $this->whatsapp : $this->sms;
     }
 
     /** Alert the salon's owners when a new online booking lands (E8-3). */
@@ -40,8 +53,10 @@ class BookingNotifier
             ->where('role', 'owner')->where('is_active', true)
             ->whereNotNull('phone')->get();
 
+        $channel = $this->channel($appointment->salon);
+
         foreach ($owners as $owner) {
-            $this->sms->send(
+            $channel->send(
                 $owner->phone,
                 "New booking: {$appointment->customer->name} — {$appointment->service->name} "
                 . "with {$appointment->staff->name} on {$this->when($appointment)}.",
@@ -54,7 +69,7 @@ class BookingNotifier
     {
         $appointment->loadMissing('salon', 'service', 'staff', 'customer');
 
-        $this->sms->send(
+        $this->channel($appointment->salon)->send(
             $appointment->customer->phone,
             "Reminder — {$appointment->salon->name}: your {$appointment->service->name} "
             . "with {$appointment->staff->name} is at {$this->when($appointment)}.",

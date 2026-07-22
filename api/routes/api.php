@@ -125,6 +125,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
         // Salon profile & branding
         Route::patch('/salon', [SalonSettingsController::class, 'update']);
+        Route::post('/salon/logo', [SalonSettingsController::class, 'uploadLogo']);
     });
 });
 

@@ -9,6 +9,9 @@ use App\Services\Billing\PaymentGateway;
 use App\Services\Sms\ConfigSmsSender;
 use App\Services\Sms\LogSmsSender;
 use App\Services\Sms\SmsSender;
+use App\Services\WhatsApp\CloudApiWhatsAppSender;
+use App\Services\WhatsApp\LogWhatsAppSender;
+use App\Services\WhatsApp\WhatsAppSender;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -35,6 +38,23 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new ConfigSmsSender($gateway, (string) ($config['country_code'] ?? '966'));
+        });
+
+        $this->app->singleton(WhatsAppSender::class, function ($app) {
+            $config = $app['config']['whatsapp'];
+            $cloud = $config['cloud'] ?? [];
+
+            // Fall back to the log driver until Cloud API credentials are set.
+            if (empty($cloud['token']) || empty($cloud['phone_number_id'])) {
+                return new LogWhatsAppSender();
+            }
+
+            return new CloudApiWhatsAppSender(
+                (string) $cloud['base_url'],
+                (string) $cloud['phone_number_id'],
+                (string) $cloud['token'],
+                (string) ($config['country_code'] ?? '966'),
+            );
         });
 
         $this->app->singleton(PaymentGateway::class, function ($app) {

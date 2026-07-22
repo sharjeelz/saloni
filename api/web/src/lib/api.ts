@@ -33,11 +33,13 @@ export async function api<T = unknown>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = getToken();
+  const isForm = options.body instanceof FormData;
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
+      // Let the browser set multipart boundaries for FormData uploads.
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers ?? {}),
     },
@@ -68,3 +70,5 @@ export const patch = <T>(path: string, data?: unknown) =>
 export const put = <T>(path: string, data?: unknown) =>
   api<T>(path, { method: "PUT", body: data ? JSON.stringify(data) : undefined });
 export const del = <T>(path: string) => api<T>(path, { method: "DELETE" });
+export const upload = <T>(path: string, form: FormData) =>
+  api<T>(path, { method: "POST", body: form });
