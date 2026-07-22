@@ -190,7 +190,9 @@
       "confirmDelete": "Delete this? This can't be undone.",
       "saved": "Saved.",
       "deleted": "Deleted.",
-      "error": "Couldn't save. Please try again."
+      "error": "Couldn't save. Please try again.",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
     },
     "branches": {
       "title": "Branches",

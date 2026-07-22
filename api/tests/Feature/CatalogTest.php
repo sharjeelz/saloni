@@ -226,4 +226,35 @@ class CatalogTest extends TestCase
             ['name' => 'X', 'duration_min' => 30, 'price' => 40],
         ]])->assertForbidden();
     }
+
+    // ---- E4-4: category reordering ------------------------------------------
+
+    public function test_owner_reorders_categories(): void
+    {
+        [$salon, $owner] = $this->salon();
+        Tenancy::set($salon);
+        $a = ServiceCategory::create(['name' => 'Hair', 'sort_order' => 0]);
+        $b = ServiceCategory::create(['name' => 'Nails', 'sort_order' => 1]);
+        $c = ServiceCategory::create(['name' => 'Spa', 'sort_order' => 2]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($owner);
+        $this->putJson('/api/service-categories/reorder', ['ids' => [$c->id, $a->id, $b->id]])->assertOk();
+
+        $this->assertDatabaseHas('service_categories', ['id' => $c->id, 'sort_order' => 0]);
+        $this->assertDatabaseHas('service_categories', ['id' => $a->id, 'sort_order' => 1]);
+        $this->assertDatabaseHas('service_categories', ['id' => $b->id, 'sort_order' => 2]);
+    }
+
+    public function test_reorder_rejects_a_foreign_category(): void
+    {
+        [, $ownerA] = $this->salon('glow');
+        [$salonB] = $this->salon('lush');
+        Tenancy::set($salonB);
+        $foreign = ServiceCategory::create(['name' => 'X', 'sort_order' => 0]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($ownerA);
+        $this->putJson('/api/service-categories/reorder', ['ids' => [$foreign->id]])->assertStatus(422);
+    }
 }

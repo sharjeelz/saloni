@@ -44,6 +44,20 @@ export default function ServicesPage() {
 
   const reloadCats = () => { categories.reload(); services.reload(); };
 
+  async function moveCat(index: number, dir: -1 | 1) {
+    const list = categories.data?.data ?? [];
+    const j = index + dir;
+    if (j < 0 || j >= list.length) return;
+    const ids = list.map((cat) => cat.id);
+    [ids[index], ids[j]] = [ids[j], ids[index]];
+    try {
+      await put("/service-categories/reorder", { ids });
+      reloadCats();
+    } catch {
+      notify(c("error"), "error");
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("title")}>
@@ -63,8 +77,22 @@ export default function ServicesPage() {
           <p className="text-sm text-muted">{t("noCategories")}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
-            {categories.data.data.map((cat) => (
+            {categories.data.data.map((cat, i) => (
               <li key={cat.id} className="flex items-center gap-3 py-2.5">
+                <span className="flex flex-col">
+                  <button
+                    onClick={() => moveCat(i, -1)}
+                    disabled={i === 0}
+                    aria-label={c("moveUp")}
+                    className="text-muted hover:text-accent-ink disabled:opacity-30"
+                  >▲</button>
+                  <button
+                    onClick={() => moveCat(i, 1)}
+                    disabled={i === categories.data!.data.length - 1}
+                    aria-label={c("moveDown")}
+                    className="text-muted hover:text-accent-ink disabled:opacity-30"
+                  >▼</button>
+                </span>
                 <span className="font-medium text-ink">{cat.name}</span>
                 <span className="text-sm text-muted">
                   {t("servicesCount", { n: cat.services_count ?? 0 })}
