@@ -91,7 +91,8 @@
     "yourBookings": "Your upcoming bookings",
     "noBookings": "No upcoming bookings for this number.",
     "manageThis": "Manage",
-    "backToBook": "Book a new appointment"
+    "backToBook": "Book a new appointment",
+    "directions": "Get directions"
   },
   "app": {
     "brand": "Salooni",
@@ -361,6 +362,17 @@
       "loadError": "Couldn't load your dashboard.",
       "retry": "Try again",
       "with": "with"
+    },
+    "onboarding": {
+      "title": "Get your salon ready",
+      "subtitle": "A few quick steps and you can start taking bookings.",
+      "staffTitle": "Add your team",
+      "staffBody": "Invite the staff who'll take appointments.",
+      "branchTitle": "Add your branch & hours",
+      "branchBody": "Set your location, address for directions, and working hours.",
+      "serviceTitle": "Add your services",
+      "serviceBody": "Type them in, or snap a photo of your menu to import.",
+      "go": "Start"
     }
   }
 }

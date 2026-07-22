@@ -49,7 +49,7 @@ class PublicBookingController extends Controller
 
         return response()->json([
             'data' => Branch::where('is_active', true)->orderBy('name')
-                ->get(['id', 'name', 'address', 'city']),
+                ->get(['id', 'name', 'address', 'city', 'lat', 'lng']),
         ]);
     }
 

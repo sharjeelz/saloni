@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { get } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+type Setup = { has_staff: boolean; has_branch: boolean; has_service: boolean; slug: string };
 type Dashboard = {
   range: { from: string; to: string; timezone: string };
+  setup: Setup;
   totals: { bookings: number; by_status: Record<string, number> };
   revenue: { collected: number; expected: number; currency: string };
   by_staff: { staff_id: number; staff: string; bookings: number; revenue: number }[];
@@ -117,9 +120,13 @@ export default function DashboardPage() {
   const maxStaff = Math.max(1, ...data.by_staff.map((s) => s.bookings));
   const maxService = Math.max(1, ...data.by_service.map((s) => s.bookings));
 
+  const setupDone = data.setup.has_staff && data.setup.has_branch && data.setup.has_service;
+
   return (
     <div className="mx-auto max-w-5xl">
       {header}
+
+      {!setupDone && <OnboardingChecklist setup={data.setup} />}
 
       {/* Signature hero — collected revenue in brass, day status stripe */}
       <section className="mt-6 grid gap-4 md:grid-cols-[1.3fr_1fr]">
@@ -211,6 +218,51 @@ export default function DashboardPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function OnboardingChecklist({ setup }: { setup: Setup }) {
+  const t = useTranslations("app.onboarding");
+  const steps = [
+    { done: setup.has_staff, href: "/staff", title: t("staffTitle"), body: t("staffBody") },
+    { done: setup.has_branch, href: "/branches", title: t("branchTitle"), body: t("branchBody") },
+    { done: setup.has_service, href: "/services", title: t("serviceTitle"), body: t("serviceBody") },
+  ];
+  const done = steps.filter((s) => s.done).length;
+
+  return (
+    <section className="mb-6 rounded-2xl border border-accent/30 bg-accent/5 p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{t("title")}</h2>
+        <span className="text-sm text-muted tnum">{done}/{steps.length}</span>
+      </div>
+      <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
+      <ol className="mt-4 flex flex-col gap-2.5">
+        {steps.map((s, i) => (
+          <li key={i}>
+            <Link
+              href={s.href}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 transition-colors ${
+                s.done ? "border-line bg-surface/50" : "border-line bg-surface hover:border-accent"
+              }`}
+            >
+              <span
+                className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${
+                  s.done ? "bg-[var(--color-ok)] text-white" : "border border-line text-muted"
+                }`}
+              >
+                {s.done ? "✓" : i + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={`block font-medium ${s.done ? "text-muted line-through" : "text-ink"}`}>{s.title}</span>
+                {!s.done && <span className="block text-sm text-muted">{s.body}</span>}
+              </span>
+              {!s.done && <span className="shrink-0 text-accent-ink">{t("go")}</span>}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Branch;
 use App\Models\Salon;
+use App\Models\Service;
+use App\Models\User;
 use App\Support\Tenancy;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -64,6 +67,13 @@ class DashboardController extends Controller
 
         return response()->json([
             'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString(), 'timezone' => $tz],
+            // Onboarding checklist state — drives the "get set up" guide on the dashboard.
+            'setup' => [
+                'has_staff' => User::where('role', 'staff')->exists(),
+                'has_branch' => Branch::exists(),
+                'has_service' => Service::exists(),
+                'slug' => $salon->slug,
+            ],
             'totals' => [
                 'bookings' => $appts->count(),
                 'by_status' => $byStatus,
