@@ -51,6 +51,24 @@ class CatalogTest extends TestCase
         $this->assertDatabaseCount('working_hours', 2);
     }
 
+    public function test_branch_keeps_map_link_separate_from_address(): void
+    {
+        [, $owner] = $this->salon();
+        Sanctum::actingAs($owner);
+
+        $b = $this->postJson('/api/branches', [
+            'name' => 'Olaya', 'city' => 'Riyadh', 'address' => '1234 Qurtubah, Riyadh',
+            'maps_url' => 'https://maps.google.com/?q=24.76,46.66',
+        ])->assertCreated()->json('data');
+
+        $this->assertDatabaseHas('branches', [
+            'id' => $b['id'], 'address' => '1234 Qurtubah, Riyadh', 'maps_url' => 'https://maps.google.com/?q=24.76,46.66',
+        ]);
+
+        // A non-URL in the map field is rejected (address stays free text).
+        $this->postJson('/api/branches', ['name' => 'B', 'maps_url' => 'not a link'])->assertStatus(422);
+    }
+
     public function test_end_of_day_before_start_is_rejected(): void
     {
         [, $owner] = $this->salon();

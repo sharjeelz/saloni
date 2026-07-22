@@ -76,6 +76,7 @@ class BranchController extends Controller
             'name' => [$required, 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:120'],
+            'maps_url' => ['nullable', 'string', 'url', 'max:2048'],
             'phone' => ['nullable', 'string', 'max:20'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
