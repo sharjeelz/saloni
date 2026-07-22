@@ -13,8 +13,9 @@ class Appointment extends Model
     public const STATUSES = ['pending', 'confirmed', 'done', 'no_show', 'cancelled'];
 
     protected $fillable = [
-        'public_token', 'salon_id', 'branch_id', 'customer_id', 'service_id', 'staff_id',
-        'starts_at', 'ends_at', 'status', 'source', 'price', 'notes', 'cancelled_at', 'reminder_sent_at',
+        'public_token', 'reference', 'salon_id', 'branch_id', 'customer_id', 'service_id', 'staff_id',
+        'starts_at', 'ends_at', 'status', 'source', 'price', 'notes', 'cancelled_at',
+        'cancelled_by', 'cancellation_reason', 'reminder_sent_at',
     ];
 
     protected function casts(): array

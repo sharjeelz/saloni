@@ -63,6 +63,7 @@ class BookingService
 
             return Appointment::create([
                 'public_token' => (string) Str::uuid(),
+                'reference' => $this->uniqueReference(),
                 'branch_id' => $branch->id,
                 'customer_id' => $customer->id,
                 'service_id' => $service->id,
@@ -139,6 +140,24 @@ class BookingService
         if (! $offered->contains($time)) {
             throw new SlotUnavailableException('That time is not available.');
         }
+    }
+
+    /**
+     * A short, human-quotable, globally-unique booking reference. Uses an
+     * unambiguous alphabet (no 0/O/1/I/L) so it's easy to read out loud.
+     */
+    protected function uniqueReference(): string
+    {
+        $alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+        do {
+            $ref = '';
+            for ($i = 0; $i < 6; $i++) {
+                $ref .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+        } while (Appointment::withoutGlobalScope('salon')->where('reference', $ref)->exists());
+
+        return $ref;
     }
 
     /**

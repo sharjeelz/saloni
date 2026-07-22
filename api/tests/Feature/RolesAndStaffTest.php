@@ -64,6 +64,16 @@ class RolesAndStaffTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_phone_with_spaces_and_dashes_is_normalized(): void
+    {
+        [$salon, $owner] = $this->makeSalonWithOwner();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/staff/invite', ['name' => 'Lina', 'phone' => '+966 50 111 2222'])
+            ->assertCreated();
+        $this->assertDatabaseHas('users', ['salon_id' => $salon->id, 'phone' => '+966501112222']);
+    }
+
     public function test_owner_can_edit_and_reactivate_staff(): void
     {
         [, $owner, $staff] = $this->makeSalonWithOwner();

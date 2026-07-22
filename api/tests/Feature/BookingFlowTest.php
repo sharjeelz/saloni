@@ -84,6 +84,45 @@ class BookingFlowTest extends TestCase
         ]);
     }
 
+    public function test_customer_limited_to_one_active_booking_until_cancelled(): void
+    {
+        $phone = '+966500000123';
+        $book = fn (string $time) => $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => $time, 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ]);
+
+        // First booking is fine.
+        $token = $book('11:00')->assertCreated()->json('data.manage_token');
+
+        // A second, with the same number, is blocked — and points at the first.
+        $book('13:00')->assertStatus(409)->assertJsonPath('existing.manage_token', $token);
+
+        // After cancelling the first, they can book again.
+        $this->postJson("/api/book/manage/{$token}/cancel")->assertOk();
+        $book('13:00')->assertCreated();
+    }
+
+    public function test_customer_can_look_up_their_bookings_by_phone_otp(): void
+    {
+        $phone = '+966500000123';
+        $token = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.manage_token');
+
+        // Wrong code → no leak.
+        $this->postJson('/api/book/glow/lookup', ['phone' => $phone, 'code' => '000000'])->assertStatus(422);
+
+        // Correct OTP → returns the upcoming booking with its manage token.
+        $this->postJson('/api/book/glow/lookup', ['phone' => $phone, 'code' => $this->otpFor($phone)])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.manage_token', $token);
+    }
+
     public function test_booking_requires_a_valid_otp(): void
     {
         $this->postJson('/api/book/glow/appointments', [
@@ -143,7 +182,7 @@ class BookingFlowTest extends TestCase
             'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
             'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
             'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
-        ])->json('data.reference');
+        ])->json('data.manage_token');
 
         $this->getJson("/api/book/manage/{$ref}")->assertOk()->assertJsonPath('data.staff.name', 'Lina');
         $this->postJson("/api/book/manage/{$ref}/cancel")->assertOk();
@@ -167,6 +206,56 @@ class BookingFlowTest extends TestCase
 
         $this->patchJson("/api/appointments/{$appt['id']}/status", ['status' => 'done'])
             ->assertOk()->assertJsonPath('data.status', 'done');
+    }
+
+    public function test_cancellation_records_who_and_why(): void
+    {
+        $phone = '+966500000123';
+        // Customer cancel via the manage link → cancelled_by = customer.
+        $token = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.manage_token');
+        $this->postJson("/api/book/manage/{$token}/cancel")->assertOk();
+        $this->assertDatabaseHas('appointments', ['public_token' => $token, 'cancelled_by' => 'customer']);
+
+        // Admin cancel with a reason → cancelled_by = owner + reason.
+        Tenancy::set($this->salon);
+        $customer = Customer::create(['salon_id' => $this->salon->id, 'name' => 'Mona', 'phone' => '+966500009999']);
+        $appt = Appointment::create([
+            'salon_id' => $this->salon->id, 'branch_id' => $this->branch->id, 'customer_id' => $customer->id,
+            'service_id' => $this->service->id, 'staff_id' => $this->staff->id,
+            'starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addHour(),
+            'status' => 'confirmed', 'source' => 'walk_in',
+        ]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($this->owner);
+        $this->patchJson("/api/appointments/{$appt->id}/status", ['status' => 'cancelled', 'reason' => 'Double booked'])
+            ->assertOk();
+        $this->assertDatabaseHas('appointments', [
+            'id' => $appt->id, 'cancelled_by' => 'owner', 'cancellation_reason' => 'Double booked',
+        ]);
+    }
+
+    public function test_owner_can_find_a_booking_by_reference(): void
+    {
+        Sanctum::actingAs($this->owner);
+        $phone = '+966500000123';
+        $ref = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.reference');
+
+        // Reference search spans all dates (no from/to needed) and is case-insensitive.
+        $this->getJson('/api/appointments?reference=' . strtolower($ref))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.customer.name', 'Sara');
+
+        $this->getJson('/api/appointments?reference=ZZZZZZ')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_calendar_lists_appointments_in_range(): void
@@ -228,12 +317,12 @@ class BookingFlowTest extends TestCase
             'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
             'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
             'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
-        ])->json('data.reference');
+        ])->json('data.manage_token');
 
-        // Reschedule to 13:00 — same token comes back (BUG-3).
+        // Reschedule to 13:00 — same manage token comes back (BUG-3).
         $this->postJson("/api/book/manage/{$ref}/reschedule", [
             'date' => $this->date->format('Y-m-d'), 'time' => '13:00',
-        ])->assertOk()->assertJsonPath('data.reference', $ref);
+        ])->assertOk()->assertJsonPath('data.manage_token', $ref);
 
         // The original manage link still resolves to the live (confirmed) booking.
         $this->getJson("/api/book/manage/{$ref}")
