@@ -37,6 +37,7 @@ export default function ServicesPage() {
   const [staffFor, setStaffFor] = useState<Service | null>(null);
   const [importing, setImporting] = useState(false);
   const [catFilter, setCatFilter] = useState<number | "all" | "none">("all");
+  const [catsOpen, setCatsOpen] = useState(false);
 
   if (services.loading || categories.loading) return <Spinner />;
   if (services.error || !services.data || !categories.data) return <LoadError onRetry={services.reload} />;
@@ -72,16 +73,21 @@ export default function ServicesPage() {
 
       {/* Categories management */}
       <Card className="mb-6 p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
-            {t("manageCategories")}
-          </h2>
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => setCatsOpen((o) => !o)} className="flex min-w-0 items-center gap-2 text-start">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+              className={`shrink-0 text-muted transition-transform ${catsOpen ? "rotate-90" : ""} ${locale === "ar" ? "-scale-x-100" : ""}`}>
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+            <h2 className="truncate font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{t("manageCategories")}</h2>
+            <span className="shrink-0 text-sm text-muted">({categories.data.data.length})</span>
+          </button>
           <Button variant="ghost" onClick={() => setAddingCat(true)}>+ {t("addCategory")}</Button>
         </div>
-        {categories.data.data.length === 0 ? (
-          <p className="text-sm text-muted">{t("noCategories")}</p>
+        {catsOpen && (categories.data.data.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("noCategories")}</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-line">
+          <ul className="mt-3 flex flex-col divide-y divide-line">
             {categories.data.data.map((cat, i) => (
               <li key={cat.id} className="flex items-center gap-3 py-2.5">
                 <span className="flex flex-col">
@@ -111,7 +117,7 @@ export default function ServicesPage() {
               </li>
             ))}
           </ul>
-        )}
+        ))}
       </Card>
 
       {/* Services */}
@@ -211,6 +217,9 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
 }) {
   const t = useTranslations("app.services");
   const c = useTranslations("app.common");
+  const locale = useLocale();
+  const catName = (cat: { name: string; name_en?: string | null }) =>
+    locale === "en" && cat.name_en ? cat.name_en : cat.name;
   const { notify } = useToast();
   const [form, setForm] = useState({
     name: service?.name ?? "",
@@ -223,10 +232,14 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const ar = form.name.trim();
+    const en = form.name_en.trim();
+    if (!ar && !en) { notify(t("nameRequired"), "error"); return; }
     setBusy(true);
     const payload = {
-      name: form.name,
-      name_en: form.name_en || null,
+      // Arabic is the primary; fall back to English so the record always has a name.
+      name: ar || en,
+      name_en: ar ? (en || null) : null,
       duration_min: Number(form.duration_min),
       price: Number(form.price),
       service_category_id: form.service_category_id ? Number(form.service_category_id) : null,
@@ -245,13 +258,13 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
   return (
     <Modal open onClose={onClose} title={service ? t("edit") : t("add")}>
       <form onSubmit={save} className="flex flex-col gap-4">
-        <Field label={t("name")}>
-          <Input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        <Field label={t("nameArabic")}>
+          <Input dir="rtl" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
         </Field>
-        <Field label={t("nameEn")}>
-          <Input dir="ltr" placeholder={t("nameEnPlaceholder")} value={form.name_en}
-            onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
+        <Field label={t("nameEnglish")}>
+          <Input dir="ltr" value={form.name_en} onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
         </Field>
+        <p className="-mt-2 text-xs text-muted">{t("nameBilingualHint")}</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("duration")}>
             <Input type="number" min={5} max={600} required dir="ltr" value={form.duration_min}
@@ -266,7 +279,7 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
           <Select value={form.service_category_id}
             onChange={(e) => setForm((f) => ({ ...f, service_category_id: e.target.value }))}>
             <option value="">{t("noCategory")}</option>
-            {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+            {categories.map((cat) => <option key={cat.id} value={cat.id}>{catName(cat)}</option>)}
           </Select>
         </Field>
         <div className="mt-1 flex items-center justify-between gap-2">
@@ -301,8 +314,11 @@ function CategoryForm({ category, onClose, onSaved, onDeleted }: {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const ar = name.trim();
+    const en = nameEn.trim();
+    if (!ar && !en) { notify(t("nameRequired"), "error"); return; }
     setBusy(true);
-    const payload = { name, name_en: nameEn || null };
+    const payload = { name: ar || en, name_en: ar ? (en || null) : null };
     try {
       if (category) await patch(`/service-categories/${category.id}`, payload);
       else await post("/service-categories", payload);
@@ -334,10 +350,11 @@ function CategoryForm({ category, onClose, onSaved, onDeleted }: {
             </div>
           </div>
         )}
-        <Field label={t("categoryName")}><Input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
-        <Field label={t("nameEn")}>
-          <Input dir="ltr" placeholder={t("nameEnPlaceholder")} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+        <Field label={t("nameArabic")}><Input dir="rtl" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        <Field label={t("nameEnglish")}>
+          <Input dir="ltr" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
         </Field>
+        <p className="-mt-2 text-xs text-muted">{t("nameBilingualHint")}</p>
         <div className="flex items-center justify-between gap-2">
           {category ? <Button type="button" variant="danger" onClick={remove}>{c("delete")}</Button> : <span />}
           <div className="flex gap-2">
