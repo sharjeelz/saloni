@@ -108,11 +108,14 @@ class AppointmentController extends Controller
 
         $data = $request->validate([
             'status' => ['required', Rule::in(Appointment::STATUSES)],
+            'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $appointment->status = $data['status'];
         if ($data['status'] === 'cancelled') {
             $appointment->cancelled_at = now();
+            $appointment->cancelled_by = $request->user()->role; // owner | staff
+            $appointment->cancellation_reason = $data['reason'] ?? null;
         }
         if ($data['status'] === 'done') {
             $appointment->customer?->update(['last_visit_at' => $appointment->ends_at]);

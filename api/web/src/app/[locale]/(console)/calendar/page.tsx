@@ -13,6 +13,7 @@ import {
 
 type Appt = {
   id: number; starts_at: string; status: string;
+  cancelled_by?: string | null; cancellation_reason?: string | null;
   customer: { name: string; phone: string } | null;
   service: { name: string; duration_min: number } | null;
   staff: { name: string } | null;
@@ -39,6 +40,7 @@ export default function CalendarPage() {
   const [refSearch, setRefSearch] = useState("");
   const [searchResult, setSearchResult] = useState<Appt[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [cancelFor, setCancelFor] = useState<Appt | null>(null);
   const searching = refSearch.trim().length >= 2;
 
   const statusLabel = (s: string): string =>
@@ -86,9 +88,11 @@ export default function CalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refSearch]);
 
-  async function setStatusAny(a: Appt, status: string) {
-    try { await patch(`/appointments/${a.id}/status`, { status }); reload(); refReload(); notify(c("saved")); }
-    catch { notify(c("error"), "error"); }
+  async function setStatusAny(a: Appt, status: string, reason?: string) {
+    try {
+      await patch(`/appointments/${a.id}/status`, { status, ...(reason ? { reason } : {}) });
+      reload(); refReload(); notify(c("saved"));
+    } catch { notify(c("error"), "error"); }
   }
 
   const apptRow = (a: Appt, withDate = false) => (
@@ -99,19 +103,25 @@ export default function CalendarPage() {
       <div className="min-w-0 flex-1">
         <p className="font-medium text-ink">{a.customer?.name}</p>
         <p className="text-sm text-muted">{a.service?.name} · {t("with")} {a.staff?.name}</p>
+        {a.status === "cancelled" && (
+          <p className="mt-0.5 text-sm text-muted">
+            {a.cancelled_by === "customer" ? t("cbCustomer") : t("cbAdmin")}
+            {a.cancellation_reason ? ` · ${a.cancellation_reason}` : ""}
+          </p>
+        )}
       </div>
       <Badge tone={STATUS_TONE[a.status]}>{statusLabel(a.status)}</Badge>
       {a.status === "pending" && (
         <div className="flex gap-1.5">
           <Button onClick={() => setStatusAny(a, "confirmed")}>{t("confirm")}</Button>
-          <Button variant="danger" onClick={() => setStatusAny(a, "cancelled")}>{t("markCancelled")}</Button>
+          <Button variant="danger" onClick={() => setCancelFor(a)}>{t("markCancelled")}</Button>
         </div>
       )}
       {a.status === "confirmed" && (
         <div className="flex gap-1.5">
           <Button onClick={() => setStatusAny(a, "done")}>{t("markDone")}</Button>
           <Button variant="ghost" onClick={() => setStatusAny(a, "no_show")}>{t("markNoShow")}</Button>
-          <Button variant="danger" onClick={() => setStatusAny(a, "cancelled")}>{t("markCancelled")}</Button>
+          <Button variant="danger" onClick={() => setCancelFor(a)}>{t("markCancelled")}</Button>
         </div>
       )}
     </Card>
@@ -168,7 +178,33 @@ export default function CalendarPage() {
         <WalkInModal slug={salon.slug} defaultDate={date} onClose={() => setWalkIn(false)}
           onSaved={() => { setWalkIn(false); reload(); notify(t("booked")); }} />
       )}
+
+      {cancelFor && (
+        <CancelModal
+          onClose={() => setCancelFor(null)}
+          onConfirm={(reason) => { void setStatusAny(cancelFor, "cancelled", reason); setCancelFor(null); }}
+        />
+      )}
     </div>
+  );
+}
+
+function CancelModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (reason: string) => void }) {
+  const t = useTranslations("app.calendar");
+  const c = useTranslations("app.common");
+  const [reason, setReason] = useState("");
+  return (
+    <Modal open onClose={onClose} title={t("cancelModalTitle")}>
+      <div className="flex flex-col gap-4">
+        <Field label={t("cancelReasonLabel")}>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("cancelReasonPlaceholder")} />
+        </Field>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>{c("cancel")}</Button>
+          <Button variant="danger" onClick={() => onConfirm(reason)}>{t("markCancelled")}</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

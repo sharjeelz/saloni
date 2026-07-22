@@ -208,6 +208,37 @@ class BookingFlowTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'done');
     }
 
+    public function test_cancellation_records_who_and_why(): void
+    {
+        $phone = '+966500000123';
+        // Customer cancel via the manage link → cancelled_by = customer.
+        $token = $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $this->branch->id, 'service_id' => $this->service->id,
+            'staff_id' => $this->staff->id, 'date' => $this->date->format('Y-m-d'),
+            'time' => '11:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $this->otpFor($phone),
+        ])->json('data.manage_token');
+        $this->postJson("/api/book/manage/{$token}/cancel")->assertOk();
+        $this->assertDatabaseHas('appointments', ['public_token' => $token, 'cancelled_by' => 'customer']);
+
+        // Admin cancel with a reason → cancelled_by = owner + reason.
+        Tenancy::set($this->salon);
+        $customer = Customer::create(['salon_id' => $this->salon->id, 'name' => 'Mona', 'phone' => '+966500009999']);
+        $appt = Appointment::create([
+            'salon_id' => $this->salon->id, 'branch_id' => $this->branch->id, 'customer_id' => $customer->id,
+            'service_id' => $this->service->id, 'staff_id' => $this->staff->id,
+            'starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addHour(),
+            'status' => 'confirmed', 'source' => 'walk_in',
+        ]);
+        Tenancy::clear();
+
+        Sanctum::actingAs($this->owner);
+        $this->patchJson("/api/appointments/{$appt->id}/status", ['status' => 'cancelled', 'reason' => 'Double booked'])
+            ->assertOk();
+        $this->assertDatabaseHas('appointments', [
+            'id' => $appt->id, 'cancelled_by' => 'owner', 'cancellation_reason' => 'Double booked',
+        ]);
+    }
+
     public function test_owner_can_find_a_booking_by_reference(): void
     {
         Sanctum::actingAs($this->owner);

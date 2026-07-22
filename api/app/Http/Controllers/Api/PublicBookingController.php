@@ -301,7 +301,11 @@ class PublicBookingController extends Controller
 
         abort_if(in_array($appointment->status, ['cancelled', 'done'], true), 422, 'This booking can no longer be cancelled.');
 
-        $appointment->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+        $appointment->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancelled_by' => 'customer',
+        ]);
 
         return response()->json(['message' => 'Booking cancelled.']);
     }
