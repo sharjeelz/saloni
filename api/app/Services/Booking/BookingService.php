@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -48,33 +49,42 @@ class BookingService
         $start = $localStart->clone()->utc();
         $end = $localStart->clone()->addMinutes((int) $service->duration_min)->utc();
 
-        return DB::transaction(function () use ($branch, $service, $staff, $customer, $start, $end, $source) {
-            // Lock the staff's overlapping rows to serialize concurrent bookings.
-            $conflict = Appointment::where('staff_id', $staff->id)
-                ->where('status', '!=', 'cancelled')
-                ->where('starts_at', '<', $end)
-                ->where('ends_at', '>', $start)
-                ->lockForUpdate()
-                ->exists();
+        try {
+            return DB::transaction(function () use ($branch, $service, $staff, $customer, $start, $end, $source) {
+                // Lock the staff's overlapping rows to serialize concurrent bookings.
+                $conflict = Appointment::where('staff_id', $staff->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->where('starts_at', '<', $end)
+                    ->where('ends_at', '>', $start)
+                    ->lockForUpdate()
+                    ->exists();
 
-            if ($conflict) {
+                if ($conflict) {
+                    throw new SlotUnavailableException();
+                }
+
+                return Appointment::create([
+                    'public_token' => (string) Str::uuid(),
+                    'reference' => $this->uniqueReference(),
+                    'branch_id' => $branch->id,
+                    'customer_id' => $customer->id,
+                    'service_id' => $service->id,
+                    'staff_id' => $staff->id,
+                    'starts_at' => $start,
+                    'ends_at' => $end,
+                    'status' => 'confirmed',
+                    'source' => $source,
+                    'price' => $service->price,
+                ]);
+            });
+        } catch (QueryException $e) {
+            // The DB exclusion constraint is the real race guard — a concurrent
+            // booking that slipped past the check surfaces here.
+            if ($this->isOverlapViolation($e)) {
                 throw new SlotUnavailableException();
             }
-
-            return Appointment::create([
-                'public_token' => (string) Str::uuid(),
-                'reference' => $this->uniqueReference(),
-                'branch_id' => $branch->id,
-                'customer_id' => $customer->id,
-                'service_id' => $service->id,
-                'staff_id' => $staff->id,
-                'starts_at' => $start,
-                'ends_at' => $end,
-                'status' => 'confirmed',
-                'source' => $source,
-                'price' => $service->price,
-            ]);
-        });
+            throw $e;
+        }
     }
 
     /**
@@ -100,29 +110,42 @@ class BookingService
         $start = $localStart->clone()->utc();
         $end = $localStart->clone()->addMinutes((int) $service->duration_min)->utc();
 
-        return DB::transaction(function () use ($appointment, $staff, $start, $end) {
-            $conflict = Appointment::where('staff_id', $staff->id)
-                ->where('id', '!=', $appointment->id)
-                ->where('status', '!=', 'cancelled')
-                ->where('starts_at', '<', $end)
-                ->where('ends_at', '>', $start)
-                ->lockForUpdate()
-                ->exists();
+        try {
+            return DB::transaction(function () use ($appointment, $staff, $start, $end) {
+                $conflict = Appointment::where('staff_id', $staff->id)
+                    ->where('id', '!=', $appointment->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->where('starts_at', '<', $end)
+                    ->where('ends_at', '>', $start)
+                    ->lockForUpdate()
+                    ->exists();
 
-            if ($conflict) {
+                if ($conflict) {
+                    throw new SlotUnavailableException();
+                }
+
+                $appointment->update([
+                    'starts_at' => $start,
+                    'ends_at' => $end,
+                    'status' => 'confirmed',
+                    'cancelled_at' => null,
+                    'reminder_sent_at' => null, // re-remind for the new time
+                ]);
+
+                return $appointment;
+            });
+        } catch (QueryException $e) {
+            if ($this->isOverlapViolation($e)) {
                 throw new SlotUnavailableException();
             }
+            throw $e;
+        }
+    }
 
-            $appointment->update([
-                'starts_at' => $start,
-                'ends_at' => $end,
-                'status' => 'confirmed',
-                'cancelled_at' => null,
-                'reminder_sent_at' => null, // re-remind for the new time
-            ]);
-
-            return $appointment;
-        });
+    /** Postgres exclusion-constraint violation (SQLSTATE 23P01) from the no-overlap guard. */
+    protected function isOverlapViolation(QueryException $e): bool
+    {
+        return $e->getCode() === '23P01';
     }
 
     /**

@@ -10,7 +10,7 @@
     "getStarted": "Get started"
   },
   "home": {
-    "kicker": "Salon SaaS · Kingdom of Saudi Arabia",
+    "kicker": "We take care of the bookings, so you can take care of your customers.",
     "title": "Run your salon. Fill every chair.",
     "subtitle": "Online booking, staff scheduling, and appointment management — built for salons across the Kingdom, in Arabic and English.",
     "ctaPrimary": "Start free trial",
@@ -48,6 +48,7 @@
     "anyStaff": "Any available",
     "date": "Date",
     "noSlots": "No times available on this day — try another date.",
+    "genericError": "Something went wrong. Please try again.",
     "closedDay": "The salon is closed on this day — please pick another date.",
     "staffOff": "This specialist is off on this day — try another date, or choose “Any available”.",
     "noSpecialist": "No specialist is available for this service at this location.",
@@ -179,7 +180,8 @@
       "signingIn": "Signing in…",
       "error": "Wrong email or password.",
       "connError": "Can't reach the server. Is the API running on port 8000?",
-      "tagline": "Run your salon. Fill every chair."
+      "tagline": "Run your salon. Fill every chair.",
+      "eyebrow": "You run the salon — we handle the rest"
     },
     "common": {
       "loadError": "Something went wrong loading this.",

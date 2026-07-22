@@ -12,6 +12,8 @@ Two parts: **configure the server once**, then **onboard each salon**.
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
+# SECURITY: never set OTP_EXPOSE_DEBUG_CODE in production — it returns the
+# plaintext OTP in API responses (account-takeover). Local/dev/test only.
 APP_URL=https://api.yourdomain.com        # must be the real public URL — logo/QR URLs derive from it
 
 # Database (Postgres)
