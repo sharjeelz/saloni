@@ -173,4 +173,67 @@ class AvailabilityTest extends TestCase
 
         $this->getJson('/api/book/glow/services')->assertNotFound();
     }
+
+    // ---- no-slot reasons -----------------------------------------------------
+
+    protected function reason(?int $staffId = null, ?string $date = null): string
+    {
+        return app(AvailabilityService::class)
+            ->reasonForNoSlots($this->branch, $this->service, $staffId, $date ?? $this->date->format('Y-m-d'));
+    }
+
+    protected function closeAllDay(?int $userId): void
+    {
+        TimeOff::create([
+            'salon_id' => $this->salon->id, 'branch_id' => $this->branch->id, 'user_id' => $userId,
+            'starts_at' => Carbon::parse($this->date->format('Y-m-d') . ' 00:00', $this->tz)->utc(),
+            'ends_at' => Carbon::parse($this->date->format('Y-m-d') . ' 23:59', $this->tz)->utc(),
+        ]);
+    }
+
+    public function test_reason_is_closed_for_a_whole_branch_closure(): void
+    {
+        $this->closeAllDay(null); // whole-branch closure
+        $this->assertEmpty($this->times());
+        $this->assertSame('closed', $this->reason());
+    }
+
+    public function test_reason_is_closed_when_branch_is_not_open_that_weekday(): void
+    {
+        $otherWeekday = $this->date->copy()->addDay()->format('Y-m-d'); // no hours set
+        $this->assertSame('closed', $this->reason(null, $otherWeekday));
+    }
+
+    public function test_reason_is_off_when_the_specialist_is_on_time_off(): void
+    {
+        $this->closeAllDay($this->staff->id); // just this staff, branch still open
+        $this->assertEmpty($this->times());
+        $this->assertSame('off', $this->reason());
+    }
+
+    public function test_reason_is_full_when_booked_out(): void
+    {
+        $this->appointmentAt('10:00', '13:00'); // one long booking eats the whole window
+        $this->assertEmpty($this->times());
+        $this->assertSame('full', $this->reason());
+    }
+
+    public function test_reason_is_no_staff_when_nobody_performs_the_service(): void
+    {
+        $orphan = Service::create(['salon_id' => $this->salon->id, 'name' => 'Nails', 'duration_min' => 30, 'price' => 50]);
+        $svc = app(AvailabilityService::class);
+
+        $this->assertSame('no_staff', $svc->reasonForNoSlots($this->branch, $orphan, null, $this->date->format('Y-m-d')));
+    }
+
+    public function test_public_availability_returns_a_reason_when_empty(): void
+    {
+        Tenancy::clear();
+        $this->closeAllDay(null);
+
+        $this->getJson("/api/book/glow/availability?branch_id={$this->branch->id}&service_id={$this->service->id}&date={$this->date->format('Y-m-d')}")
+            ->assertOk()
+            ->assertJsonPath('meta.reason', 'closed')
+            ->assertJsonCount(0, 'data');
+    }
 }

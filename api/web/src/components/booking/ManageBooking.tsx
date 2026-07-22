@@ -34,6 +34,7 @@ export default function ManageBooking({ token }: { token: string }) {
   const [rescheduling, setRescheduling] = useState(false);
   const [date, setDate] = useState("");
   const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [slotsReason, setSlotsReason] = useState<string | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +63,9 @@ export default function ManageBooking({ token }: { token: string }) {
     if (!rescheduling || !date) return;
     let live = true;
     setSlotsLoading(true); setPick(null);
-    get<{ data: Slot[] }>(`/book/manage/${token}/availability?date=${date}`)
-      .then((r) => live && setSlots(r.data))
-      .catch(() => live && setSlots([]))
+    get<{ data: Slot[]; meta?: { reason?: string | null } }>(`/book/manage/${token}/availability?date=${date}`)
+      .then((r) => { if (live) { setSlots(r.data); setSlotsReason(r.meta?.reason ?? null); } })
+      .catch(() => { if (live) { setSlots([]); setSlotsReason(null); } })
       .finally(() => live && setSlotsLoading(false));
     return () => { live = false; };
   }, [rescheduling, date, token]);
@@ -157,7 +158,12 @@ export default function ManageBooking({ token }: { token: string }) {
                   ))}
                 </div>
                 {slotsLoading ? <Spinner inline /> : !slots || slots.length === 0 ? (
-                  <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">{t("noSlots")}</p>
+                  <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
+                    {slotsReason === "closed" ? t("closedDay")
+                      : slotsReason === "off" ? t("staffOff")
+                      : slotsReason === "no_staff" ? t("noSpecialist")
+                      : t("noSlots")}
+                  </p>
                 ) : (
                   <div className="flex flex-wrap gap-2" dir="ltr">
                     {slots.map((s) => (

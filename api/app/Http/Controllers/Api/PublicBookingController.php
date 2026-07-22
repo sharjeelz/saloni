@@ -95,6 +95,10 @@ class PublicBookingController extends Controller
                 'service' => $service->only(['id', 'name', 'duration_min', 'price', 'currency']),
                 'branch_id' => $branch->id,
                 'slot_step_minutes' => AvailabilityService::SLOT_STEP_MINUTES,
+                // Why the day is empty, so the UI can explain (closed / off / full).
+                'reason' => empty($slots)
+                    ? $this->availability->reasonForNoSlots($branch, $service, $data['staff_id'] ?? null, $data['date'])
+                    : null,
             ],
             'data' => $slots,
         ]);
@@ -283,15 +287,25 @@ class PublicBookingController extends Controller
         $appointment = $this->resolveByToken($token);
         $data = $request->validate(['date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today']]);
 
+        $branch = Branch::findOrFail($appointment->branch_id);
+        $service = Service::findOrFail($appointment->service_id);
+
         $slots = $this->availability->slots(
-            Branch::findOrFail($appointment->branch_id),
-            Service::findOrFail($appointment->service_id),
+            $branch,
+            $service,
             $appointment->staff_id,
             $data['date'],
             $appointment->id, // ignore this appointment so its slot stays offered
         );
 
-        return response()->json(['data' => $slots]);
+        return response()->json([
+            'data' => $slots,
+            'meta' => [
+                'reason' => empty($slots)
+                    ? $this->availability->reasonForNoSlots($branch, $service, $appointment->staff_id, $data['date'])
+                    : null,
+            ],
+        ]);
     }
 
     /** Cancel from the manage link (E6-4). */
