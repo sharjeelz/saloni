@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
 import { Button, Input, Spinner } from "@/components/ui/kit";
 
-type Row = { name: string; duration_min: number; price: number; category: string | null };
+type Row = { name: string; name_en: string | null; duration_min: number; price: number; category: string | null };
 
 /**
  * Onboarding shortcut: the owner uploads a photo of their price list, Claude
@@ -24,12 +24,12 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setScanning(true);
     try {
       const fd = new FormData();
-      fd.append("menu", file);
+      Array.from(files).forEach((f) => fd.append("menu[]", f));
       const res = await upload<{ services: Row[] }>("/services/scan-menu", fd);
       setRows(res.services);
       if (res.services.length === 0) notify(t("importEmpty"), "error");
@@ -75,7 +75,8 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
                 <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" />
               </svg>
               <p className="max-w-xs text-sm text-muted">{t("importIntro")}</p>
-              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFile} />
+              <p className="max-w-xs text-xs text-muted">{t("importBilingual")}</p>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onFile} />
               <Button type="button" onClick={() => fileRef.current?.click()}>{t("importChoose")}</Button>
             </>
           )}
@@ -96,6 +97,13 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
                   </button>
                 </div>
+                <Input
+                  dir="ltr"
+                  value={row.name_en ?? ""}
+                  placeholder={t("nameEnPlaceholder")}
+                  onChange={(e) => update(i, { name_en: e.target.value || null })}
+                  className="mb-2"
+                />
                 <div className="grid grid-cols-3 gap-2">
                   <label className="flex flex-col gap-1">
                     <span className="text-xs text-muted">{t("duration")}</span>

@@ -15,7 +15,7 @@ import {
 type Category = { id: number; name: string; services_count?: number };
 type StaffLite = { id: number; name: string; title: string | null };
 type Service = {
-  id: number; name: string; duration_min: number; price: string;
+  id: number; name: string; name_en: string | null; duration_min: number; price: string;
   currency: string; is_active: boolean; service_category_id: number | null;
   category?: { id: number; name: string } | null;
   staff?: StaffLite[];
@@ -149,6 +149,7 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
   const { notify } = useToast();
   const [form, setForm] = useState({
     name: service?.name ?? "",
+    name_en: service?.name_en ?? "",
     duration_min: String(service?.duration_min ?? 30),
     price: service ? String(Number(service.price)) : "",
     service_category_id: service?.service_category_id ? String(service.service_category_id) : "",
@@ -160,6 +161,7 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
     setBusy(true);
     const payload = {
       name: form.name,
+      name_en: form.name_en || null,
       duration_min: Number(form.duration_min),
       price: Number(form.price),
       service_category_id: form.service_category_id ? Number(form.service_category_id) : null,
@@ -180,6 +182,10 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
       <form onSubmit={save} className="flex flex-col gap-4">
         <Field label={t("name")}>
           <Input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        </Field>
+        <Field label={t("nameEn")}>
+          <Input dir="ltr" placeholder={t("nameEnPlaceholder")} value={form.name_en}
+            onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("duration")}>

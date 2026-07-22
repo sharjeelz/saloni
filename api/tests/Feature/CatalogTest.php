@@ -166,19 +166,22 @@ class CatalogTest extends TestCase
                     'type' => 'tool_use',
                     'name' => 'record_services',
                     'input' => ['services' => [
-                        ['name' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
+                        // Bilingual entry: Arabic primary + English secondary, ONE service.
+                        ['name' => 'قص شعر', 'name_en' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
                         ['name' => 'Manicure', 'price' => 60, 'category' => 'Nails'], // no duration → default
                     ]],
                 ]],
             ], 200),
         ]);
 
-        $this->postJson('/api/services/scan-menu', ['menu' => UploadedFile::fake()->image('menu.jpg')])
+        $this->postJson('/api/services/scan-menu', ['menu' => [UploadedFile::fake()->image('menu.jpg')]])
             ->assertOk()
             ->assertJsonCount(2, 'services')
-            ->assertJsonPath('services.0.name', 'Haircut')
+            ->assertJsonPath('services.0.name', 'قص شعر')
+            ->assertJsonPath('services.0.name_en', 'Haircut')     // merged, not duplicated
             ->assertJsonPath('services.0.category', 'Hair')
-            ->assertJsonPath('services.1.duration_min', 30); // sensibly defaulted
+            ->assertJsonPath('services.1.name_en', null)          // single-language service
+            ->assertJsonPath('services.1.duration_min', 30);      // sensibly defaulted
 
         // Nothing is saved by scanning — it's a preview only.
         $this->assertDatabaseCount('services', 0);
@@ -190,7 +193,7 @@ class CatalogTest extends TestCase
         Sanctum::actingAs($owner);
         config(['services.anthropic.key' => null]);
 
-        $this->postJson('/api/services/scan-menu', ['menu' => UploadedFile::fake()->image('m.jpg')])
+        $this->postJson('/api/services/scan-menu', ['menu' => [UploadedFile::fake()->image('m.jpg')]])
             ->assertStatus(422);
     }
 
@@ -200,7 +203,7 @@ class CatalogTest extends TestCase
         Sanctum::actingAs($owner);
 
         $this->postJson('/api/services/import', ['services' => [
-            ['name' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
+            ['name' => 'قص شعر', 'name_en' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
             ['name' => 'Beard trim', 'duration_min' => 15, 'price' => 20, 'category' => 'Hair'],
             ['name' => 'Manicure', 'duration_min' => 45, 'price' => 60, 'category' => 'Nails'],
             ['name' => 'Quick wash', 'duration_min' => 10, 'price' => 10, 'category' => null],
@@ -209,6 +212,7 @@ class CatalogTest extends TestCase
         // Two categories (Hair deduped), in menu order; four active services.
         $this->assertDatabaseCount('service_categories', 2);
         $this->assertDatabaseCount('services', 4);
+        $this->assertDatabaseHas('services', ['salon_id' => $salon->id, 'name' => 'قص شعر', 'name_en' => 'Haircut']);
         $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Hair', 'sort_order' => 0]);
         $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Nails', 'sort_order' => 1]);
     }

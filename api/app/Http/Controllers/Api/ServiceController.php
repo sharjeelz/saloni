@@ -61,16 +61,20 @@ class ServiceController extends Controller
     public function scanMenu(Request $request, MenuScanner $scanner): JsonResponse
     {
         $request->validate([
-            'menu' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'menu' => ['required', 'array', 'min:1', 'max:5'],
+            'menu.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
         ]);
 
-        $file = $request->file('menu');
+        $images = [];
+        foreach ($request->file('menu') as $file) {
+            $images[] = [
+                'data' => base64_encode((string) file_get_contents($file->getRealPath())),
+                'media_type' => $file->getMimeType(),
+            ];
+        }
 
         try {
-            $services = $scanner->scan(
-                base64_encode((string) file_get_contents($file->getRealPath())),
-                $file->getMimeType(),
-            );
+            $services = $scanner->scan($images);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -88,6 +92,7 @@ class ServiceController extends Controller
         $data = $request->validate([
             'services' => ['required', 'array', 'min:1', 'max:200'],
             'services.*.name' => ['required', 'string', 'max:255'],
+            'services.*.name_en' => ['nullable', 'string', 'max:255'],
             'services.*.duration_min' => ['required', 'integer', 'min:5', 'max:600'],
             'services.*.price' => ['required', 'numeric', 'min:0'],
             'services.*.category' => ['nullable', 'string', 'max:255'],
@@ -115,6 +120,7 @@ class ServiceController extends Controller
 
             Service::create([
                 'name' => $row['name'],
+                'name_en' => $row['name_en'] ?? null,
                 'duration_min' => $row['duration_min'],
                 'price' => $row['price'],
                 'service_category_id' => $categoryId,
@@ -156,6 +162,7 @@ class ServiceController extends Controller
 
         return $request->validate([
             'name' => [$updating ? 'sometimes' : 'required', 'string', 'max:255'],
+            'name_en' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'duration_min' => [$updating ? 'sometimes' : 'required', 'integer', 'min:5', 'max:600'],
             'price' => [$updating ? 'sometimes' : 'required', 'numeric', 'min:0'],
