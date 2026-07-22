@@ -140,8 +140,8 @@ export default function BillingPage() {
         ) : (
           <ul className="divide-y divide-line">
             {invoices.data.data.map((inv) => (
-              <li key={inv.id} className="flex items-center gap-4 px-4 py-3">
-                <span className="font-mono text-sm text-ink" dir="ltr">{inv.number}</span>
+              <li key={inv.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
+                <span className="min-w-0 truncate font-mono text-sm text-ink" dir="ltr">{inv.number}</span>
                 <span className="text-sm text-muted">{date(inv.issued_at)}</span>
                 <span className="ms-auto font-medium text-ink tnum">{money(Number(inv.total), inv.currency)}</span>
                 <Badge tone={INVOICE_TONE[inv.status] ?? "muted"}>{invoiceLabel(inv.status)}</Badge>

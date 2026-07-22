@@ -89,13 +89,13 @@ export default function ServicesPage() {
                     onClick={() => moveCat(i, -1)}
                     disabled={i === 0}
                     aria-label={c("moveUp")}
-                    className="text-muted hover:text-accent-ink disabled:opacity-30"
+                    className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30"
                   >▲</button>
                   <button
                     onClick={() => moveCat(i, 1)}
                     disabled={i === categories.data!.data.length - 1}
                     aria-label={c("moveDown")}
-                    className="text-muted hover:text-accent-ink disabled:opacity-30"
+                    className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30"
                   >▼</button>
                 </span>
                 <span className="font-medium text-ink">{catName(cat)}</span>
@@ -252,7 +252,7 @@ function ServiceForm({ service, categories, onClose, onSaved, onDeleted }: {
           <Input dir="ltr" placeholder={t("nameEnPlaceholder")} value={form.name_en}
             onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("duration")}>
             <Input type="number" min={5} max={600} required dir="ltr" value={form.duration_min}
               onChange={(e) => setForm((f) => ({ ...f, duration_min: e.target.value }))} />

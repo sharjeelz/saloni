@@ -167,7 +167,7 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
                   onChange={(e) => update(i, { name_en: e.target.value || null })}
                   className="mb-2"
                 />
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <label className="flex flex-col gap-1">
                     <span className="text-xs text-muted">{t("duration")}</span>
                     <Input type="number" dir="ltr" min={5} value={row.duration_min}

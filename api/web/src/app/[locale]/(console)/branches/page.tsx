@@ -111,7 +111,7 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
     <Modal open onClose={onClose} title={branch ? t("edit") : t("add")}>
       <form onSubmit={save} className="flex flex-col gap-4">
         <Field label={t("name")}><Input required value={form.name} onChange={set("name")} /></Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("city")}><Input value={form.city} onChange={set("city")} /></Field>
           <Field label={t("phone")}><Input dir="ltr" value={form.phone} onChange={set("phone")} /></Field>
         </div>
@@ -173,16 +173,16 @@ function HoursModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
             const row = rows[d] ?? { open: false, start: "10:00", end: "22:00" };
             return (
               <div key={d} className="flex items-center gap-3">
-                <label className="flex w-24 items-center gap-2 text-sm text-ink">
+                <label className="flex w-20 shrink-0 items-center gap-2 text-sm text-ink">
                   <input type="checkbox" checked={row.open}
                     onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, open: e.target.checked } }))} />
                   {label}
                 </label>
                 {row.open ? (
-                  <div className="flex items-center gap-2" dir="ltr">
-                    <Input type="time" value={row.start} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, start: e.target.value } }))} className="w-28" />
+                  <div className="flex min-w-0 flex-1 items-center gap-2" dir="ltr">
+                    <Input type="time" value={row.start} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, start: e.target.value } }))} />
                     <span className="text-muted">–</span>
-                    <Input type="time" value={row.end} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, end: e.target.value } }))} className="w-28" />
+                    <Input type="time" value={row.end} onChange={(e) => setRows((r) => ({ ...r, [d]: { ...row, end: e.target.value } }))} />
                   </div>
                 ) : <span className="text-sm text-muted">{t("closed")}</span>}
               </div>

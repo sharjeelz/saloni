@@ -134,7 +134,7 @@ function BlockForm({ branches, staff, onClose, onSaved }: {
             {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3" dir="ltr">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" dir="ltr">
           <Field label={t("from")}><Input type="date" required value={form.from} onChange={set("from")} /></Field>
           <Field label={t("to")}><Input type="date" required value={form.to} onChange={set("to")} /></Field>
         </div>

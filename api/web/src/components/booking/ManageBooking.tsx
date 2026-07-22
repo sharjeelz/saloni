@@ -109,9 +109,9 @@ export default function ManageBooking({ token }: { token: string }) {
 
   return (
     <div style={themeStyle} className="min-h-dvh bg-ground">
-      <header className="mx-auto flex max-w-lg items-center justify-between px-5 py-4">
-        <span className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">{b.salon?.name}</span>
-        <LocaleSwitcher />
+      <header className="mx-auto flex max-w-lg items-center justify-between gap-3 px-5 py-4">
+        <span className="min-w-0 flex-1 truncate font-[family-name:var(--font-display)] text-xl font-semibold text-ink">{b.salon?.name}</span>
+        <span className="shrink-0"><LocaleSwitcher /></span>
       </header>
 
       <main className="mx-auto max-w-lg px-5 pb-16">
@@ -151,7 +151,7 @@ export default function ManageBooking({ token }: { token: string }) {
                 <div className="mb-4 flex gap-2 overflow-x-auto pb-1" dir="ltr">
                   {days.map((d) => (
                     <button key={d} onClick={() => setDate(d)}
-                      className={`shrink-0 rounded-xl border px-3 py-2 text-sm transition-colors ${date === d ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"}`}>
+                      className={`flex min-h-11 shrink-0 items-center justify-center rounded-xl border px-3.5 py-2 text-sm transition-colors ${date === d ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"}`}>
                       {dayLabel(d)}
                     </button>
                   ))}
@@ -162,7 +162,7 @@ export default function ManageBooking({ token }: { token: string }) {
                   <div className="flex flex-wrap gap-2" dir="ltr">
                     {slots.map((s) => (
                       <button key={s.time} onClick={() => setPick(s.time)}
-                        className={`rounded-lg border px-3.5 py-2 text-sm font-medium tnum transition-colors ${pick === s.time ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"}`}>
+                        className={`inline-flex min-h-11 items-center rounded-lg border px-4 py-2.5 text-sm font-medium tnum transition-colors ${pick === s.time ? "border-accent bg-accent text-on-accent" : "border-line text-ink hover:border-accent"}`}>
                         {s.time}
                       </button>
                     ))}

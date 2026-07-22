@@ -59,9 +59,12 @@ class DashboardController extends Controller
             'revenue' => $revenue($g),
         ])->sortByDesc('bookings')->values();
 
+        // From midnight today in the salon's timezone (so an appointment earlier
+        // today, even one in progress, still shows) — including pending ones the
+        // owner still needs to confirm.
         $upcoming = Appointment::with(['customer:id,name,phone', 'service:id,name', 'staff:id,name'])
-            ->where('status', 'confirmed')
-            ->where('starts_at', '>=', now())
+            ->whereIn('status', ['confirmed', 'pending'])
+            ->where('starts_at', '>=', Carbon::today($tz)->utc())
             ->orderBy('starts_at')
             ->limit(10)
             ->get();

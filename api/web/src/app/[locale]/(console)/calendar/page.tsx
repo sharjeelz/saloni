@@ -112,13 +112,13 @@ export default function CalendarPage() {
       </div>
       <Badge tone={STATUS_TONE[a.status]}>{statusLabel(a.status)}</Badge>
       {a.status === "pending" && (
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <Button onClick={() => setStatusAny(a, "confirmed")}>{t("confirm")}</Button>
           <Button variant="danger" onClick={() => setCancelFor(a)}>{t("markCancelled")}</Button>
         </div>
       )}
       {a.status === "confirmed" && (
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <Button onClick={() => setStatusAny(a, "done")}>{t("markDone")}</Button>
           <Button variant="ghost" onClick={() => setStatusAny(a, "no_show")}>{t("markNoShow")}</Button>
           <Button variant="danger" onClick={() => setCancelFor(a)}>{t("markCancelled")}</Button>
@@ -320,7 +320,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
             </ul>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("customer")}><Input required value={form.customer_name} onChange={set("customer_name")} /></Field>
           <Field label={t("customerPhone")}><Input required dir="ltr" placeholder="+9665…" value={form.customer_phone} onChange={set("customer_phone")} /></Field>
         </div>
@@ -330,7 +330,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
             {branches.data!.data.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("service")}>
             <Select required value={form.service_id} onChange={set("service_id")}>
               <option value="" disabled>—</option>
