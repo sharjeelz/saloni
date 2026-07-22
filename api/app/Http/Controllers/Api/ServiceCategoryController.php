@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
+use App\Support\ServiceCategoryPresets;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,12 @@ class ServiceCategoryController extends Controller
             'data' => ServiceCategory::withCount('services')
                 ->orderBy('sort_order')->orderBy('name')->get(),
         ]);
+    }
+
+    /** Canonical bilingual categories offered as quick-picks when adding one. */
+    public function presets(): JsonResponse
+    {
+        return response()->json(['data' => ServiceCategoryPresets::all()]);
     }
 
     public function store(Request $request): JsonResponse
@@ -70,6 +77,7 @@ class ServiceCategoryController extends Controller
     {
         return $request->validate([
             'name' => [$updating ? 'sometimes' : 'required', 'string', 'max:255'],
+            'name_en' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
     }

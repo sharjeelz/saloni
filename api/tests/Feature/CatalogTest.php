@@ -167,8 +167,8 @@ class CatalogTest extends TestCase
                     'name' => 'record_services',
                     'input' => ['services' => [
                         // Bilingual entry: Arabic primary + English secondary, ONE service.
-                        ['name' => 'قص شعر', 'name_en' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category' => 'Hair'],
-                        ['name' => 'Manicure', 'price' => 60, 'category' => 'Nails'], // no duration → default
+                        ['name' => 'قص شعر', 'name_en' => 'Haircut', 'duration_min' => 30, 'price' => 40, 'category_key' => 'hair'],
+                        ['name' => 'Manicure', 'price' => 60, 'category_key' => 'nails'], // no duration → default
                     ]],
                 ]],
             ], 200),
@@ -179,7 +179,7 @@ class CatalogTest extends TestCase
             ->assertJsonCount(2, 'services')
             ->assertJsonPath('services.0.name', 'قص شعر')
             ->assertJsonPath('services.0.name_en', 'Haircut')     // merged, not duplicated
-            ->assertJsonPath('services.0.category', 'Hair')
+            ->assertJsonPath('services.0.category_key', 'hair')   // mapped to a canonical key
             ->assertJsonPath('services.1.name_en', null)          // single-language service
             ->assertJsonPath('services.1.duration_min', 30);      // sensibly defaulted
 
@@ -223,6 +223,52 @@ class CatalogTest extends TestCase
         $this->assertDatabaseCount('service_staff', 4);
         $haircut = Service::where('name', 'قص شعر')->first();
         $this->assertTrue($haircut->staff->contains($staff->id));
+    }
+
+    public function test_import_maps_category_keys_to_bilingual_canonical_categories(): void
+    {
+        [$salon, $owner] = $this->salon();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/services/import', ['services' => [
+            ['name' => 'قص شعر', 'duration_min' => 30, 'price' => 40, 'category_key' => 'hair'],
+            ['name' => 'Nail art', 'duration_min' => 45, 'price' => 60, 'category_key' => 'nails'],
+            ['name' => 'مانيكير', 'duration_min' => 45, 'price' => 55, 'category_key' => 'nails'], // same key
+            ['name' => 'Piercing', 'duration_min' => 15, 'price' => 30, 'category' => 'Piercing'], // custom, free-text
+        ]])->assertCreated()->assertJsonPath('created', 4);
+
+        // 'nails' used twice → one category; canonical ones are bilingual; custom stays as-is.
+        $this->assertDatabaseCount('service_categories', 3);
+        $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'الشعر', 'name_en' => 'Hair']);
+        $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'الأظافر', 'name_en' => 'Nails']);
+        $this->assertDatabaseHas('service_categories', ['salon_id' => $salon->id, 'name' => 'Piercing', 'name_en' => null]);
+    }
+
+    public function test_import_reuses_an_existing_category_for_a_preset_key(): void
+    {
+        [$salon, $owner] = $this->salon();
+        Tenancy::set($salon);
+        ServiceCategory::create(['name' => 'Nails', 'sort_order' => 0]); // pre-existing single-language
+        Tenancy::clear();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/services/import', ['services' => [
+            ['name' => 'مانيكير', 'duration_min' => 45, 'price' => 55, 'category_key' => 'nails'],
+        ]])->assertCreated();
+
+        // Reused the existing "Nails" (matched via preset English name) — no duplicate.
+        $this->assertDatabaseCount('service_categories', 1);
+    }
+
+    public function test_category_presets_are_listed(): void
+    {
+        [, $owner] = $this->salon();
+        Sanctum::actingAs($owner);
+
+        $this->getJson('/api/service-category-presets')
+            ->assertOk()
+            ->assertJsonPath('data.0.key', 'hair')
+            ->assertJsonPath('data.0.ar', 'الشعر');
     }
 
     public function test_import_rejects_staff_from_another_salon(): void

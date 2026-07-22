@@ -234,6 +234,7 @@
       "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff).",
       "nameEn": "English name (optional)",
       "nameEnPlaceholder": "Shown to customers browsing in English",
+      "presetPick": "Quick pick a standard category:",
       "importMenu": "Import from menu",
       "importTitle": "Import from your menu",
       "importIntro": "Upload a photo of your price list — we'll read the services so you can review and add them.",

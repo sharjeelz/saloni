@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { del, patch, post, put } from "@/lib/api";
+import { del, get, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
@@ -12,12 +12,13 @@ import {
   Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Select, Spinner,
 } from "@/components/ui/kit";
 
-type Category = { id: number; name: string; services_count?: number };
+type Category = { id: number; name: string; name_en?: string | null; services_count?: number };
+type Preset = { key: string; ar: string; en: string };
 type StaffLite = { id: number; name: string; title: string | null };
 type Service = {
   id: number; name: string; name_en: string | null; duration_min: number; price: string;
   currency: string; is_active: boolean; service_category_id: number | null;
-  category?: { id: number; name: string } | null;
+  category?: { id: number; name: string; name_en?: string | null } | null;
   staff?: StaffLite[];
 };
 
@@ -41,6 +42,9 @@ export default function ServicesPage() {
 
   const money = (p: string, cur: string) =>
     new Intl.NumberFormat(locale, { style: "currency", currency: cur, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(p));
+
+  const catName = (cat: { name: string; name_en?: string | null }) =>
+    locale === "en" && cat.name_en ? cat.name_en : cat.name;
 
   const reloadCats = () => { categories.reload(); services.reload(); };
 
@@ -93,7 +97,7 @@ export default function ServicesPage() {
                     className="text-muted hover:text-accent-ink disabled:opacity-30"
                   >▼</button>
                 </span>
-                <span className="font-medium text-ink">{cat.name}</span>
+                <span className="font-medium text-ink">{catName(cat)}</span>
                 <span className="text-sm text-muted">
                   {t("servicesCount", { n: cat.services_count ?? 0 })}
                 </span>
@@ -119,7 +123,7 @@ export default function ServicesPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-ink">{s.name}</p>
-                  {s.category && <Badge tone="gold">{s.category.name}</Badge>}
+                  {s.category && <Badge tone="gold">{catName(s.category)}</Badge>}
                 </div>
                 <p className="text-sm text-muted">
                   {s.duration_min} {t("min")} · {money(s.price, s.currency)}
@@ -249,16 +253,26 @@ function CategoryForm({ category, onClose, onSaved, onDeleted }: {
 }) {
   const t = useTranslations("app.services");
   const c = useTranslations("app.common");
+  const locale = useLocale();
   const { notify } = useToast();
   const [name, setName] = useState(category?.name ?? "");
+  const [nameEn, setNameEn] = useState(category?.name_en ?? "");
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [busy, setBusy] = useState(false);
+
+  // Preset quick-picks only when creating a fresh category.
+  useEffect(() => {
+    if (category) return;
+    get<{ data: Preset[] }>("/service-category-presets").then((r) => setPresets(r.data)).catch(() => {});
+  }, [category]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    const payload = { name, name_en: nameEn || null };
     try {
-      if (category) await patch(`/service-categories/${category.id}`, { name });
-      else await post("/service-categories", { name });
+      if (category) await patch(`/service-categories/${category.id}`, payload);
+      else await post("/service-categories", payload);
       onSaved();
     } catch { notify(c("error"), "error"); setBusy(false); }
   }
@@ -270,7 +284,27 @@ function CategoryForm({ category, onClose, onSaved, onDeleted }: {
   return (
     <Modal open onClose={onClose} title={category ? t("editCategory") : t("addCategory")}>
       <form onSubmit={save} className="flex flex-col gap-4">
+        {presets.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-sm text-muted">{t("presetPick")}</p>
+            <div className="flex flex-wrap gap-2">
+              {presets.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => { setName(p.ar); setNameEn(p.en); }}
+                  className="rounded-full border border-line px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent"
+                >
+                  {locale === "en" ? p.en : p.ar}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <Field label={t("categoryName")}><Input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        <Field label={t("nameEn")}>
+          <Input dir="ltr" placeholder={t("nameEnPlaceholder")} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+        </Field>
         <div className="flex items-center justify-between gap-2">
           {category ? <Button type="button" variant="danger" onClick={remove}>{c("delete")}</Button> : <span />}
           <div className="flex gap-2">

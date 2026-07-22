@@ -2,6 +2,7 @@
 
 namespace App\Services\Onboarding;
 
+use App\Support\ServiceCategoryPresets;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -17,7 +18,7 @@ class MenuScanner
 {
     /**
      * @param  array<int, array{data:string, media_type:string}>  $images  base64 image(s)
-     * @return array<int, array{name:string, name_en:?string, duration_min:int, price:float, category:?string}>
+     * @return array<int, array{name:string, name_en:?string, duration_min:int, price:float, category:?string, category_key:?string}>
      */
     public function scan(array $images): array
     {
@@ -68,14 +69,20 @@ class MenuScanner
                 . 'back of one menu. '
             : '';
 
+        $catList = collect(ServiceCategoryPresets::all())
+            ->map(fn ($p) => "{$p['key']} ({$p['en']} / {$p['ar']})")
+            ->implode(', ');
+
         return 'This is a salon price list / service menu. ' . $multi
             . 'Extract every DISTINCT service exactly once into the record_services tool. '
             . 'When the same service appears in both Arabic and English (match by price and position), MERGE it '
             . 'into a single entry: put the Arabic name in "name" and the English name in "name_en". '
             . 'If a service is written in only one language, put that name in "name" and leave "name_en" empty. '
             . 'Never list the same service twice. Keep names in their original script. '
-            . 'Group services under the category headings shown (use the language that matches "name"); if there '
-            . 'are none, leave the category empty. If a duration is not shown, estimate a sensible one. '
+            . 'For each service, set "category_key" to the SINGLE best-matching standard category from this list: '
+            . $catList . '. Map variants and languages to the same key (e.g. "Nail", "Nails", "أظافر" → nails). '
+            . 'Only if none of them reasonably fits, leave "category_key" empty and put the menu\'s own heading in '
+            . '"category" instead. If a duration is not shown, estimate a sensible one. '
             . 'Prices are in Saudi Riyal — record the number only.';
     }
 
@@ -84,6 +91,8 @@ class MenuScanner
     {
         $rows = [];
 
+        $validKeys = ServiceCategoryPresets::keys();
+
         foreach ($services as $s) {
             $name = trim((string) ($s['name'] ?? ''));
             if ($name === '') {
@@ -91,12 +100,15 @@ class MenuScanner
             }
 
             $en = trim((string) ($s['name_en'] ?? ''));
+            $key = trim((string) ($s['category_key'] ?? ''));
+            $key = in_array($key, $validKeys, true) ? $key : null;
 
             $rows[] = [
                 'name' => mb_substr($name, 0, 255),
                 'name_en' => $en !== '' && $en !== $name ? mb_substr($en, 0, 255) : null,
                 'duration_min' => max(5, min(600, (int) round((float) ($s['duration_min'] ?? 30)))),
                 'price' => max(0, round((float) ($s['price'] ?? 0), 2)),
+                'category_key' => $key,
                 'category' => ($cat = trim((string) ($s['category'] ?? ''))) !== '' ? mb_substr($cat, 0, 255) : null,
             ];
         }
@@ -122,7 +134,12 @@ class MenuScanner
                                 'name_en' => ['type' => 'string', 'description' => 'English name if the menu also shows one, else empty'],
                                 'duration_min' => ['type' => 'integer', 'description' => 'Duration in minutes'],
                                 'price' => ['type' => 'number', 'description' => 'Price in SAR, number only'],
-                                'category' => ['type' => 'string', 'description' => 'Menu category heading, or empty'],
+                                'category_key' => [
+                                    'type' => 'string',
+                                    'enum' => [...ServiceCategoryPresets::keys(), ''],
+                                    'description' => 'Standard category key, or empty if none fits',
+                                ],
+                                'category' => ['type' => 'string', 'description' => 'Menu\'s own heading (only when category_key is empty)'],
                             ],
                             'required' => ['name', 'price'],
                         ],

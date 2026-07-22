@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Services\Onboarding\MenuScanner;
+use App\Support\ServiceCategoryPresets;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class ServiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $services = Service::with(['category:id,name', 'staff:id,name,title'])
+        $services = Service::with(['category:id,name,name_en', 'staff:id,name,title'])
             ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
             ->when($request->query('category'), fn ($q, $id) => $q->where('service_category_id', $id))
             ->orderBy('name')
@@ -98,6 +99,7 @@ class ServiceController extends Controller
             'services.*.duration_min' => ['required', 'integer', 'min:5', 'max:600'],
             'services.*.price' => ['required', 'numeric', 'min:0'],
             'services.*.category' => ['nullable', 'string', 'max:255'],
+            'services.*.category_key' => ['nullable', 'string', Rule::in(ServiceCategoryPresets::keys())],
             // Optionally assign every imported service to these staff up front.
             'staff_ids' => ['sometimes', 'array'],
             'staff_ids.*' => [
@@ -108,25 +110,12 @@ class ServiceController extends Controller
 
         $staffIds = $data['staff_ids'] ?? [];
 
-        $categoryIds = [];                                          // lowercased name => id
+        $cache = [];                                                // cache-key => category id
         $nextSort = (int) (ServiceCategory::max('sort_order') ?? -1) + 1;
         $created = 0;
 
         foreach ($data['services'] as $row) {
-            $categoryId = null;
-            $catName = trim((string) ($row['category'] ?? ''));
-
-            if ($catName !== '') {
-                $key = mb_strtolower($catName);
-                if (! isset($categoryIds[$key])) {
-                    $cat = ServiceCategory::firstOrCreate(['name' => $catName], ['sort_order' => $nextSort]);
-                    if ($cat->wasRecentlyCreated) {
-                        $nextSort++;
-                    }
-                    $categoryIds[$key] = $cat->id;
-                }
-                $categoryId = $categoryIds[$key];
-            }
+            $categoryId = $this->resolveCategory($row, $cache, $nextSort);
 
             $service = Service::create([
                 'name' => $row['name'],
@@ -145,6 +134,53 @@ class ServiceController extends Controller
         }
 
         return response()->json(['created' => $created], 201);
+    }
+
+    /**
+     * Resolve a menu row to a category id. Prefers the canonical preset key
+     * (creating a bilingual category, or reusing one that already represents
+     * it in either language); otherwise falls back to the raw heading text.
+     * `$cache` and `$nextSort` are threaded across rows to dedupe + order.
+     *
+     * @param  array<string, int>  $cache
+     */
+    protected function resolveCategory(array $row, array &$cache, int &$nextSort): ?int
+    {
+        $key = trim((string) ($row['category_key'] ?? ''));
+        $preset = $key !== '' ? ServiceCategoryPresets::find($key) : null;
+
+        if ($preset) {
+            $ck = 'key:' . $preset['key'];
+            if (! isset($cache[$ck])) {
+                $names = [$preset['en'], $preset['ar']];
+                $existing = ServiceCategory::where(fn ($q) => $q
+                    ->whereIn('name', $names)->orWhereIn('name_en', $names))->first();
+
+                $cache[$ck] = $existing
+                    ? $existing->id
+                    : ServiceCategory::create([
+                        'name' => $preset['ar'], 'name_en' => $preset['en'], 'sort_order' => $nextSort++,
+                    ])->id;
+            }
+
+            return $cache[$ck];
+        }
+
+        $label = trim((string) ($row['category'] ?? ''));
+        if ($label === '') {
+            return null;
+        }
+
+        $ck = 'text:' . mb_strtolower($label);
+        if (! isset($cache[$ck])) {
+            $cat = ServiceCategory::firstOrCreate(['name' => $label], ['sort_order' => $nextSort]);
+            if ($cat->wasRecentlyCreated) {
+                $nextSort++;
+            }
+            $cache[$ck] = $cat->id;
+        }
+
+        return $cache[$ck];
     }
 
     /**

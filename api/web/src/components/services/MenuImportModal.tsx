@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ApiError, get, post, upload } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
 import { Button, Input, Spinner } from "@/components/ui/kit";
 
-type Row = { name: string; name_en: string | null; duration_min: number; price: number; category: string | null };
+type Row = { name: string; name_en: string | null; duration_min: number; price: number; category: string | null; category_key: string | null };
 type StaffLite = { id: number; name: string; is_active?: boolean };
+type Preset = { key: string; ar: string; en: string };
 
 /**
  * Onboarding shortcut: the owner uploads a photo of their price list, Claude
@@ -18,7 +19,9 @@ type StaffLite = { id: number; name: string; is_active?: boolean };
 export function MenuImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
   const t = useTranslations("app.services");
   const c = useTranslations("app.common");
+  const locale = useLocale();
   const { notify } = useToast();
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,8 +40,21 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    get<{ data: Preset[] }>("/service-category-presets").then((r) => setPresets(r.data)).catch(() => {});
+  }, []);
+
   const toggleStaff = (id: number) =>
     setStaffIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+
+  // Show the canonical category a service was mapped to, in the current language.
+  const catLabel = (row: Row) => {
+    if (row.category_key) {
+      const p = presets.find((x) => x.key === row.category_key);
+      if (p) return locale === "ar" ? p.ar : p.en;
+    }
+    return row.category ?? "";
+  };
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -160,8 +176,8 @@ export function MenuImportModal({ onClose, onImported }: { onClose: () => void; 
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-xs text-muted">{t("category")}</span>
-                    <Input value={row.category ?? ""} placeholder={t("noCategory")}
-                      onChange={(e) => update(i, { category: e.target.value || null })} />
+                    <Input value={catLabel(row)} placeholder={t("noCategory")}
+                      onChange={(e) => update(i, { category: e.target.value || null, category_key: null })} />
                   </label>
                 </div>
               </div>
