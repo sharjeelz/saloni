@@ -7,11 +7,13 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Card, Field, Input, LoadError, PageHeader, Select, Spinner } from "@/components/ui/kit";
 import { BookingPagePanel } from "@/components/settings/BookingPagePanel";
+import { SOCIAL_PLATFORMS } from "@/components/ui/social";
 
 type Salon = {
   name: string; slug: string; phone: string | null; vat_number: string | null;
   brand_color: string | null; timezone: string; locale: string; logo_path: string | null;
   notification_channel: string;
+  instagram: string | null; facebook: string | null; tiktok: string | null; youtube: string | null;
 };
 
 const TIMEZONES = ["Asia/Riyadh", "Asia/Dubai", "Asia/Kuwait", "Asia/Bahrain", "Asia/Qatar"];
@@ -67,6 +69,10 @@ export default function SettingsPage() {
         timezone: form.timezone,
         locale: form.locale,
         notification_channel: form.notification_channel,
+        instagram: form.instagram || null,
+        facebook: form.facebook || null,
+        tiktok: form.tiktok || null,
+        youtube: form.youtube || null,
       });
       notify(t("saved"));
     } catch (e2) {
@@ -146,6 +152,27 @@ export default function SettingsPage() {
             </Select>
           </Field>
           <p className="-mt-1 text-xs text-muted">{t("notifChannelHint")}</p>
+
+          {/* Social links — shown on the public booking page when filled */}
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-ink">{t("social")}</span>
+            <div className="flex flex-col gap-2">
+              {SOCIAL_PLATFORMS.map((p) => (
+                <div key={p.key} className="flex items-center gap-2">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-line bg-surface-2 text-muted">
+                    {p.icon}
+                  </span>
+                  <Input
+                    dir="ltr"
+                    placeholder={p.label}
+                    value={(form[p.key as "instagram"] as string) ?? ""}
+                    onChange={(e) => setForm((f) => (f ? { ...f, [p.key]: e.target.value } : f))}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-muted">{t("socialHint")}</p>
+          </div>
 
           {err && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{err}</p>}
           <div className="mt-1 flex justify-end">

@@ -39,7 +39,10 @@ class PublicBookingController extends Controller
         $this->pin($salon);
 
         return response()->json([
-            'data' => $salon->only(['name', 'slug', 'brand_color', 'logo_path', 'locale', 'timezone']),
+            'data' => $salon->only([
+                'name', 'slug', 'brand_color', 'logo_path', 'locale', 'timezone',
+                'instagram', 'facebook', 'tiktok', 'youtube',
+            ]),
         ]);
     }
 

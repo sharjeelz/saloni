@@ -29,6 +29,11 @@ class SalonSettingsController extends Controller
             'timezone' => ['sometimes', 'string', 'max:64'],
             'locale' => ['sometimes', 'string', 'in:ar,en'],
             'notification_channel' => ['sometimes', 'string', 'in:sms,whatsapp'],
+            // Social profiles — a handle or a full URL; the booking page normalizes it.
+            'instagram' => ['nullable', 'string', 'max:255'],
+            'facebook' => ['nullable', 'string', 'max:255'],
+            'tiktok' => ['nullable', 'string', 'max:255'],
+            'youtube' => ['nullable', 'string', 'max:255'],
         ]);
 
         $salon->update($data);
