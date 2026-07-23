@@ -59,7 +59,7 @@ Route::prefix('book/{salon:slug}')->group(function () {
 | Authenticated + tenant-scoped routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant', 'subscribed'])->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 

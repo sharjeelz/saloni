@@ -122,6 +122,11 @@
       "settings": "Settings",
       "logout": "Sign out"
     },
+    "paywall": {
+      "title": "Your free trial has ended",
+      "body": "Subscribe to keep taking bookings and managing your salon.",
+      "cta": "Subscribe"
+    },
     "customers": {
       "title": "Customers",
       "search": "Search by name or phone",

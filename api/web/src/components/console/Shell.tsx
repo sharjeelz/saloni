@@ -147,6 +147,17 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        {salon?.locked && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warn/30 bg-warn/10 px-4 py-3 sm:px-6">
+            <p className="text-sm text-ink">
+              <span className="font-semibold">{t("paywall.title")}</span> — {t("paywall.body")}
+            </p>
+            <Link href="/billing" className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-on-accent hover:opacity-90">
+              {t("paywall.cta")}
+            </Link>
+          </div>
+        )}
+
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-7">{children}</main>
       </div>
     </div>

@@ -94,7 +94,10 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user->only(['id', 'name', 'email', 'phone', 'role', 'salon_id', 'title']),
             'salon' => $user->salon
-                ? $user->salon->only(['id', 'name', 'slug', 'plan', 'trial_ends_at', 'timezone', 'locale'])
+                ? array_merge(
+                    $user->salon->only(['id', 'name', 'slug', 'plan', 'trial_ends_at', 'timezone', 'locale']),
+                    ['locked' => $user->salon->isTrialLocked()],
+                )
                 : null,
         ]);
     }

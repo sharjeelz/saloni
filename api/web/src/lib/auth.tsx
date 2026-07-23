@@ -20,6 +20,7 @@ export type Salon = {
   trial_ends_at: string | null;
   timezone: string;
   locale: string;
+  locked?: boolean;
 };
 
 type Me = { user: User; salon: Salon | null };

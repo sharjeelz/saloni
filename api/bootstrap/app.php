@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\SetTenant::class,
             'role' => \App\Http\Middleware\EnsureRole::class,
+            'subscribed' => \App\Http\Middleware\EnsureNotLocked::class,
         ]);
 
         // Normalize phone inputs (strip spaces/dashes) before validation.
