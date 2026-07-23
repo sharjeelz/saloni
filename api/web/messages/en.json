@@ -139,6 +139,8 @@
       "brandColor": "Brand color",
       "brandColorHint": "Used on your public booking page & “Book Now” button — not the console.",
       "logoUpload": "Logo",
+      "social": "Social links",
+      "socialHint": "Shown on your public booking page. Paste your profile link, or just the @handle.",
       "chooseImage": "Choose image",
       "logoHint": "Shown on your public booking page — PNG, JPG or SVG, up to 2 MB.",
       "uploading": "Uploading…",

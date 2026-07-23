@@ -9,6 +9,7 @@ class Salon extends Model
 {
     protected $fillable = [
         'name', 'slug', 'phone', 'vat_number', 'logo_path', 'brand_color',
+        'instagram', 'facebook', 'tiktok', 'youtube',
         'timezone', 'locale', 'notification_channel', 'plan', 'trial_ends_at', 'is_active',
     ];
 
