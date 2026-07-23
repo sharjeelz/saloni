@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/Modal";
 import { OfferLightbox } from "@/components/booking/OffersCarousel";
-import { Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Spinner } from "@/components/ui/kit";
+import { Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Spinner } from "@/components/ui/kit";
 
 type Offer = { id: number; image_path: string; caption: string | null; link_url: string | null; is_active: boolean; sort_order: number };
 
@@ -77,8 +77,18 @@ export default function OffersPage() {
                   <a href={o.link_url} target="_blank" rel="noopener noreferrer" dir="ltr" className="block truncate text-xs text-accent-ink hover:underline">{o.link_url}</a>
                 )}
               </div>
-              <button onClick={() => toggle(o)} aria-label={o.is_active ? t("hide") : t("show")}>
-                <Badge tone={o.is_active ? "ok" : "muted"}>{o.is_active ? t("active") : t("hidden")}</Badge>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={o.is_active}
+                onClick={() => toggle(o)}
+                className="flex shrink-0 items-center gap-2"
+                title={o.is_active ? t("hide") : t("show")}
+              >
+                <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${o.is_active ? "justify-end bg-[var(--color-ok)]" : "justify-start border border-line bg-surface-2"}`}>
+                  <span className="size-4 rounded-full bg-white shadow" />
+                </span>
+                <span className="text-sm text-muted">{o.is_active ? t("active") : t("hidden")}</span>
               </button>
               <Button variant="danger" onClick={() => remove(o)}>{c("delete")}</Button>
             </Card>
