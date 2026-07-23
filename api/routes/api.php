@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OtpController;
 use App\Http\Controllers\Api\PublicBookingController;
 use App\Http\Controllers\Api\SalonSettingsController;
@@ -45,6 +46,7 @@ Route::prefix('book/{salon:slug}')->group(function () {
     Route::get('/widget', [PublicBookingController::class, 'widget']);
     Route::get('/branches', [PublicBookingController::class, 'branches']);
     Route::get('/services', [PublicBookingController::class, 'services']);
+    Route::get('/offers', [PublicBookingController::class, 'offers']);
     Route::get('/availability', [PublicBookingController::class, 'availability']);
     // Cost/abuse-sensitive (real SMS + booking creation) — throttle per IP.
     Route::post('/otp', [PublicBookingController::class, 'requestOtp'])->middleware('throttle:8,1');
@@ -131,6 +133,13 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         // Salon profile & branding
         Route::patch('/salon', [SalonSettingsController::class, 'update']);
         Route::post('/salon/logo', [SalonSettingsController::class, 'uploadLogo']);
+
+        // Promo banners / offers
+        Route::get('/offers', [OfferController::class, 'index']);
+        Route::post('/offers', [OfferController::class, 'store']);
+        Route::put('/offers/reorder', [OfferController::class, 'reorder']);
+        Route::patch('/offers/{offer}', [OfferController::class, 'update']);
+        Route::delete('/offers/{offer}', [OfferController::class, 'destroy']);
     });
 });
 
