@@ -7,7 +7,7 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Card, Field, Input, LoadError, PageHeader, Select, Spinner } from "@/components/ui/kit";
 import { BookingPagePanel } from "@/components/settings/BookingPagePanel";
-import { SOCIAL_PLATFORMS } from "@/components/ui/social";
+import { SOCIAL_PLATFORMS, SocialButton } from "@/components/ui/social";
 
 type Salon = {
   name: string; slug: string; phone: string | null; vat_number: string | null;
@@ -159,9 +159,7 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-2">
               {SOCIAL_PLATFORMS.map((p) => (
                 <div key={p.key} className="flex items-center gap-2">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-line bg-surface-2 text-muted">
-                    {p.icon}
-                  </span>
+                  <SocialButton bg={p.bg} label={p.label}>{p.icon}</SocialButton>
                   <Input
                     dir="ltr"
                     placeholder={p.label}
