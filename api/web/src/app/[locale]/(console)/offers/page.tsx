@@ -56,25 +56,28 @@ export default function OffersPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {offers.map((o, i) => (
-            <Card key={o.id} className="flex flex-wrap items-center gap-3 p-3">
-              <span className="flex flex-col">
-                <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={c("moveUp")}
-                  className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▲</button>
-                <button onClick={() => move(i, 1)} disabled={i === offers.length - 1} aria-label={c("moveDown")}
-                  className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▼</button>
-              </span>
+            <Card key={o.id} className="overflow-hidden p-0">
+              {/* Full banner as uploaded — never cropped */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={o.image_path} alt="" className="h-16 w-28 shrink-0 rounded-lg border border-line object-cover" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-ink">{o.caption || <span className="text-muted">{t("noCaption")}</span>}</p>
-                {o.link_url && (
-                  <a href={o.link_url} target="_blank" rel="noopener noreferrer" dir="ltr" className="block truncate text-xs text-accent-ink hover:underline">{o.link_url}</a>
-                )}
+              <img src={o.image_path} alt="" className={`block w-full bg-surface-2 ${o.is_active ? "" : "opacity-50"}`} />
+              <div className="flex flex-wrap items-center gap-3 p-3">
+                <span className="flex flex-col">
+                  <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={c("moveUp")}
+                    className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▲</button>
+                  <button onClick={() => move(i, 1)} disabled={i === offers.length - 1} aria-label={c("moveDown")}
+                    className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▼</button>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-ink">{o.caption || <span className="text-muted">{t("noCaption")}</span>}</p>
+                  {o.link_url && (
+                    <a href={o.link_url} target="_blank" rel="noopener noreferrer" dir="ltr" className="block truncate text-xs text-accent-ink hover:underline">{o.link_url}</a>
+                  )}
+                </div>
+                <button onClick={() => toggle(o)} aria-label={o.is_active ? t("hide") : t("show")}>
+                  <Badge tone={o.is_active ? "ok" : "muted"}>{o.is_active ? t("active") : t("hidden")}</Badge>
+                </button>
+                <Button variant="danger" onClick={() => remove(o)}>{c("delete")}</Button>
               </div>
-              <button onClick={() => toggle(o)} aria-label={o.is_active ? t("hide") : t("show")}>
-                <Badge tone={o.is_active ? "ok" : "muted"}>{o.is_active ? t("active") : t("hidden")}</Badge>
-              </button>
-              <Button variant="danger" onClick={() => remove(o)}>{c("delete")}</Button>
             </Card>
           ))}
         </div>
