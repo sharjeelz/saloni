@@ -112,6 +112,7 @@
       "customers": "Customers",
       "branches": "Branches",
       "timeOff": "Time off",
+      "offers": "Offers",
       "billing": "Subscription",
       "settings": "Settings",
       "logout": "Sign out"
@@ -176,6 +177,24 @@
       "closure": "Branch closure",
       "added": "Time off added.",
       "newBlock": "Block time"
+    },
+    "offers": {
+      "title": "Offers & packages",
+      "add": "Add offer",
+      "intro": "Promo banners shown at the top of your booking page. Add a deal, package, or seasonal offer.",
+      "empty": "No offers yet. Add a banner to promote a deal on your booking page.",
+      "banner": "Banner image",
+      "chooseBanner": "Upload a banner (wide image works best)",
+      "caption": "Caption (optional)",
+      "captionPlaceholder": "e.g. Eid package — 3 services for 199 SAR",
+      "link": "Link (optional)",
+      "linkHint": "Where tapping the banner goes — e.g. your WhatsApp or a details page.",
+      "noCaption": "No caption",
+      "active": "Shown",
+      "hidden": "Hidden",
+      "show": "Show on booking page",
+      "hide": "Hide from booking page",
+      "added": "Offer added."
     },
     "login": {
       "title": "Welcome back",

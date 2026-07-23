@@ -41,6 +41,7 @@ class ResetSalonData extends Command
             $branchIds = DB::table('branches')->where('salon_id', $sid)->pluck('id');
 
             DB::table('appointments')->where('salon_id', $sid)->delete();
+            DB::table('offers')->where('salon_id', $sid)->delete();
             DB::table('time_off')->where('salon_id', $sid)->delete();
             DB::table('working_hours')->where('salon_id', $sid)->delete();
             DB::table('service_staff')->whereIn('service_id', $serviceIds)->delete();

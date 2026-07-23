@@ -69,6 +69,18 @@ class PublicBookingController extends Controller
     }
 
     /** Bookable slots for a service at a branch on a date (E5-2 / E6-1). */
+    /** Active promo banners for the salon, in display order (public). */
+    public function offers(Salon $salon): JsonResponse
+    {
+        $this->pin($salon);
+
+        return response()->json([
+            'data' => \App\Models\Offer::where('is_active', true)
+                ->orderBy('sort_order')->orderBy('id')
+                ->get(['id', 'image_path', 'caption', 'link_url']),
+        ]);
+    }
+
     public function availability(Request $request, Salon $salon): JsonResponse
     {
         $this->pin($salon);
