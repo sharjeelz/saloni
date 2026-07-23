@@ -55,14 +55,6 @@ export async function api<T = unknown>(
         window.location.href = `/${locale}/login`;
       }
     }
-    // Trial ended (grace paywall) — a blocked write pushes them to Billing.
-    if (res.status === 402 && typeof window !== "undefined") {
-      const seg = window.location.pathname.split("/")[1];
-      const locale = seg === "ar" || seg === "en" ? seg : "ar";
-      if (!window.location.pathname.includes("/billing")) {
-        window.location.href = `/${locale}/billing`;
-      }
-    }
     const body = await res.json().catch(() => ({}));
     throw new ApiError(res.status, (body as { message?: string })?.message ?? "Something went wrong.", body);
   }

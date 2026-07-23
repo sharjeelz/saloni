@@ -77,7 +77,7 @@ class BranchController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:120'],
             'maps_url' => ['nullable', 'string', 'url', 'max:2048'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'is_active' => ['boolean'],

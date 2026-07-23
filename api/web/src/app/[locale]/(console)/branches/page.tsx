@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { del, patch, post, put } from "@/lib/api";
+import { ApiError, del, patch, post, put } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/confirm";
@@ -102,7 +102,7 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
       if (branch) await patch(`/branches/${branch.id}`, payload);
       else await post("/branches", payload);
       onSaved();
-    } catch { notify(c("error"), "error"); setBusy(false); }
+    } catch (e) { notify(e instanceof ApiError ? e.message : c("error"), "error"); setBusy(false); }
   }
   async function remove() {
     if (!branch || !(await confirm({ title: c("delete"), message: c("confirmDelete"), confirmLabel: c("delete") }))) return;
@@ -115,7 +115,10 @@ function BranchForm({ branch, onClose, onSaved, onDeleted }: {
         <Field label={t("name")}><Input required value={form.name} onChange={set("name")} /></Field>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t("city")}><Input value={form.city} onChange={set("city")} /></Field>
-          <Field label={t("phone")}><Input dir="ltr" value={form.phone} onChange={set("phone")} /></Field>
+          <Field label={t("phone")}>
+            <Input type="tel" dir="ltr" placeholder="+9665…" value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/[^\d+\s()-]/g, "") }))} />
+          </Field>
         </div>
         <Field label={t("address")}>
           <Input value={form.address} placeholder={t("addressPlaceholder")} onChange={set("address")} />
