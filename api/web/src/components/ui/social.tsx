@@ -62,12 +62,12 @@ export function socialUrl(base: string, value: string): string {
 }
 
 /** A brand-coloured circular button with a white glyph. */
-export function SocialButton({ bg, label, children }: { bg: string; label: string; children: ReactNode }) {
+export function SocialButton({ bg, label, size = "md", children }: { bg: string; label: string; size?: "sm" | "md"; children: ReactNode }) {
   return (
     <span
       aria-label={label}
       style={{ background: bg }}
-      className="grid size-10 shrink-0 place-items-center rounded-full text-white shadow-[var(--shadow)]"
+      className={`grid shrink-0 place-items-center rounded-full text-white shadow-[var(--shadow)] ${size === "sm" ? "size-8" : "size-10"}`}
     >
       {children}
     </span>
@@ -78,15 +78,17 @@ export function SocialButton({ bg, label, children }: { bg: string; label: strin
 export function SocialLinks({
   salon,
   className = "",
+  size = "md",
 }: {
   salon: Record<string, string | null | undefined>;
   className?: string;
+  size?: "sm" | "md";
 }) {
   const items = SOCIAL_PLATFORMS.filter((p) => (salon[p.key] ?? "").trim() !== "");
   if (items.length === 0) return null;
 
   return (
-    <div className={`flex flex-wrap items-center justify-center gap-3 ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {items.map((p) => (
         <a
           key={p.key}
@@ -96,7 +98,7 @@ export function SocialLinks({
           aria-label={p.label}
           className="transition-transform hover:-translate-y-0.5"
         >
-          <SocialButton bg={p.bg} label={p.label}>{p.icon}</SocialButton>
+          <SocialButton bg={p.bg} label={p.label} size={size}>{p.icon}</SocialButton>
         </a>
       ))}
     </div>
