@@ -37,9 +37,10 @@ class OffersTest extends TestCase
         $this->postJson('/api/offers', [
             'image' => UploadedFile::fake()->image('promo.jpg', 1200, 400),
             'caption' => 'Eid package — 199 SAR',
-            'link_url' => 'https://wa.me/966500000000',
+            'link_url' => 'wa.me/966500000000', // no scheme — should be normalized
         ])->assertCreated()
             ->assertJsonPath('data.caption', 'Eid package — 199 SAR')
+            ->assertJsonPath('data.link_url', 'https://wa.me/966500000000')
             ->assertJsonPath('data.is_active', true);
 
         $this->assertDatabaseHas('offers', ['salon_id' => $salon->id, 'caption' => 'Eid package — 199 SAR']);

@@ -144,7 +144,7 @@ function OfferForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           <Input value={caption} placeholder={t("captionPlaceholder")} onChange={(e) => setCaption(e.target.value)} />
         </Field>
         <Field label={t("link")}>
-          <Input type="url" dir="ltr" placeholder="https://wa.me/966…" value={link} onChange={(e) => setLink(e.target.value)} />
+          <Input dir="ltr" placeholder="wa.me/966…  or  instagram.com/yoursalon" value={link} onChange={(e) => setLink(e.target.value)} />
         </Field>
         <p className="-mt-2 text-xs text-muted">{t("linkHint")}</p>
         <div className="mt-1 flex justify-end gap-2">

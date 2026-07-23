@@ -27,7 +27,7 @@ class OfferController extends Controller
         $data = $request->validate([
             'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'caption' => ['nullable', 'string', 'max:255'],
-            'link_url' => ['nullable', 'string', 'url', 'max:2048'],
+            'link_url' => ['nullable', 'string', 'max:2048'],
         ]);
 
         $path = $request->file('image')->store('offers', 'public');
@@ -35,7 +35,7 @@ class OfferController extends Controller
         $offer = Offer::create([
             'image_path' => Storage::disk('public')->url($path),
             'caption' => $data['caption'] ?? null,
-            'link_url' => $data['link_url'] ?? null,
+            'link_url' => $this->normalizeLink($data['link_url'] ?? null),
             'sort_order' => (int) (Offer::max('sort_order') ?? -1) + 1,
             'is_active' => true,
         ]);
@@ -47,13 +47,28 @@ class OfferController extends Controller
     {
         $data = $request->validate([
             'caption' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'link_url' => ['sometimes', 'nullable', 'string', 'url', 'max:2048'],
+            'link_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        if (array_key_exists('link_url', $data)) {
+            $data['link_url'] = $this->normalizeLink($data['link_url']);
+        }
 
         $offer->update($data);
 
         return response()->json(['data' => $offer]);
+    }
+
+    /** Accept a bare domain/handle too — prepend https:// when no scheme is given. */
+    protected function normalizeLink(?string $link): ?string
+    {
+        $link = trim((string) $link);
+        if ($link === '') {
+            return null;
+        }
+
+        return preg_match('~^https?://~i', $link) ? $link : 'https://' . ltrim($link, '/');
     }
 
     /** Persist a new banner order — ids in the desired order. */
