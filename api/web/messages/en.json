@@ -135,7 +135,16 @@
       "name": "Name",
       "email": "Email",
       "notes": "Notes",
-      "phone": "Phone"
+      "phone": "Phone",
+      "import": "Import",
+      "importTitle": "Import customers",
+      "importIntro": "Paste your customers below — one per line, as: Name, phone (email and notes are optional). Or upload a CSV.",
+      "importFile": "Upload a CSV file instead",
+      "importHint": "Numbers can be local (0501234567) or international. Existing customers are matched by phone and updated — never duplicated.",
+      "importRun": "Import",
+      "imported": "Added",
+      "updated": "Updated",
+      "skipped": "Skipped"
     },
     "settings": {
       "title": "Salon settings",

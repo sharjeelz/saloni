@@ -92,4 +92,32 @@ class CustomerDirectoryTest extends TestCase
         // Route-bound access to B's customer 404s.
         $this->getJson("/api/customers/{$bCustomer->id}")->assertNotFound();
     }
+
+    public function test_import_creates_updates_and_skips_by_phone(): void
+    {
+        [$salon, $owner] = $this->salon('glow');
+        Tenancy::set($salon);
+        Customer::create(['salon_id' => $salon->id, 'name' => 'Old Name', 'phone' => '+966501112222']);
+        Tenancy::clear();
+        Sanctum::actingAs($owner);
+
+        $text = implode("\n", [
+            'name,phone,email',              // header — skipped silently (no digits)
+            'Sara, 0501234567, sara@x.com',  // new (local form → +966501234567)
+            'Mona, +966555000111',           // new
+            'Updated, 0501112222',           // updates the existing +966501112222
+            'BadRow, notaphone',             // skipped (invalid phone)
+            '',                              // blank — ignored
+        ]);
+
+        $this->postJson('/api/customers/import', ['text' => $text])
+            ->assertOk()
+            ->assertJsonPath('created', 2)
+            ->assertJsonPath('updated', 1)
+            ->assertJsonPath('skipped', 1);
+
+        $this->assertDatabaseCount('customers', 3); // existing (updated) + Sara + Mona
+        $this->assertDatabaseHas('customers', ['salon_id' => $salon->id, 'phone' => '+966501234567', 'email' => 'sara@x.com']);
+        $this->assertDatabaseHas('customers', ['salon_id' => $salon->id, 'phone' => '+966501112222', 'name' => 'Updated']);
+    }
 }

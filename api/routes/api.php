@@ -79,6 +79,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Customers — directory, search, history (owner + staff).
     Route::get('/customers', [CustomerController::class, 'index']);
+    Route::post('/customers/import', [CustomerController::class, 'import']);
     Route::get('/customers/{customer}', [CustomerController::class, 'show']);
     Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
 

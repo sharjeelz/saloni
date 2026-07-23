@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ApiError, get, patch } from "@/lib/api";
+import { ApiError, get, patch, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -27,6 +27,7 @@ export default function CustomersPage() {
   const [term, setTerm] = useState("");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<Customer | null>(null);
+  const [importing, setImporting] = useState(false);
 
   // Debounce the search input.
   useEffect(() => {
@@ -40,7 +41,9 @@ export default function CustomersPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title={t("title")} />
+      <PageHeader title={t("title")}>
+        <Button variant="ghost" onClick={() => setImporting(true)}>{t("import")}</Button>
+      </PageHeader>
 
       <div className="mb-5">
         <Input
@@ -78,6 +81,87 @@ export default function CustomersPage() {
       )}
 
       {open && <CustomerDrawer customer={open} onClose={() => setOpen(null)} onSaved={reload} />}
+      {importing && <ImportModal onClose={() => setImporting(false)} onDone={reload} />}
+    </div>
+  );
+}
+
+function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const t = useTranslations("app.customers");
+  const c = useTranslations("app.common");
+  const { notify } = useToast();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ created: number; updated: number; skipped: number } | null>(null);
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => setText((prev) => (prev ? prev + "\n" : "") + String(reader.result ?? ""));
+    reader.readAsText(f);
+    e.target.value = "";
+  }
+
+  async function run() {
+    if (!text.trim()) return;
+    setBusy(true);
+    try {
+      const r = await post<{ created: number; updated: number; skipped: number }>("/customers/import", { text });
+      setResult(r);
+      onDone();
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : c("error"), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t("importTitle")}>
+      {result ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            <Stat n={result.created} label={t("imported")} tone="ok" />
+            <Stat n={result.updated} label={t("updated")} tone="accent" />
+            <Stat n={result.skipped} label={t("skipped")} tone="muted" />
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={onClose}>{c("close")}</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted">{t("importIntro")}</p>
+          <textarea
+            dir="ltr"
+            rows={7}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={"Sara, 0501234567\nMona, +966555000111, mona@email.com"}
+            className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 font-mono text-sm text-ink outline-none focus:border-accent"
+          />
+          <label className="cursor-pointer text-sm font-medium text-accent-ink hover:underline">
+            {t("importFile")}
+            <input type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={onFile} />
+          </label>
+          <p className="-mt-2 text-xs text-muted">{t("importHint")}</p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>{c("cancel")}</Button>
+            <Button type="button" disabled={busy || !text.trim()} onClick={run}>{busy ? c("saving") : t("importRun")}</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function Stat({ n, label, tone }: { n: number; label: string; tone: "ok" | "accent" | "muted" }) {
+  const color = tone === "ok" ? "text-[var(--color-ok)]" : tone === "accent" ? "text-accent-ink" : "text-muted";
+  return (
+    <div className="flex-1 rounded-xl border border-line bg-surface-2 p-3 text-center">
+      <p className={`font-[family-name:var(--font-display)] text-2xl font-semibold tnum ${color}`}>{n}</p>
+      <p className="text-xs text-muted">{label}</p>
     </div>
   );
 }
