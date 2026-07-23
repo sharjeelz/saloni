@@ -195,6 +195,7 @@
       "link": "Link (optional)",
       "linkHint": "Where tapping the banner goes — e.g. your WhatsApp or a details page.",
       "noCaption": "No caption",
+      "preview": "Preview banner",
       "active": "Shown",
       "hidden": "Hidden",
       "show": "Show on booking page",

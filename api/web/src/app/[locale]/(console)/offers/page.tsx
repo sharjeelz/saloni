@@ -7,6 +7,7 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/Modal";
+import { OfferLightbox } from "@/components/booking/OffersCarousel";
 import { Badge, Button, Card, EmptyState, Field, Input, LoadError, PageHeader, Spinner } from "@/components/ui/kit";
 
 type Offer = { id: number; image_path: string; caption: string | null; link_url: string | null; is_active: boolean; sort_order: number };
@@ -18,6 +19,7 @@ export default function OffersPage() {
   const confirm = useConfirm();
   const { data, loading, error, reload } = useApi<{ data: Offer[] }>("/offers");
   const [adding, setAdding] = useState(false);
+  const [lightbox, setLightbox] = useState<number | null>(null);
 
   if (loading) return <Spinner />;
   if (error || !data) return <LoadError onRetry={reload} />;
@@ -56,28 +58,29 @@ export default function OffersPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {offers.map((o, i) => (
-            <Card key={o.id} className="overflow-hidden p-0">
-              {/* Full banner as uploaded — never cropped */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={o.image_path} alt="" className={`block w-full bg-surface-2 ${o.is_active ? "" : "opacity-50"}`} />
-              <div className="flex flex-wrap items-center gap-3 p-3">
-                <span className="flex flex-col">
-                  <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={c("moveUp")}
-                    className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▲</button>
-                  <button onClick={() => move(i, 1)} disabled={i === offers.length - 1} aria-label={c("moveDown")}
-                    className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▼</button>
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-ink">{o.caption || <span className="text-muted">{t("noCaption")}</span>}</p>
-                  {o.link_url && (
-                    <a href={o.link_url} target="_blank" rel="noopener noreferrer" dir="ltr" className="block truncate text-xs text-accent-ink hover:underline">{o.link_url}</a>
-                  )}
-                </div>
-                <button onClick={() => toggle(o)} aria-label={o.is_active ? t("hide") : t("show")}>
-                  <Badge tone={o.is_active ? "ok" : "muted"}>{o.is_active ? t("active") : t("hidden")}</Badge>
-                </button>
-                <Button variant="danger" onClick={() => remove(o)}>{c("delete")}</Button>
+            <Card key={o.id} className="flex flex-wrap items-center gap-3 p-3">
+              <span className="flex flex-col">
+                <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={c("moveUp")}
+                  className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▲</button>
+                <button onClick={() => move(i, 1)} disabled={i === offers.length - 1} aria-label={c("moveDown")}
+                  className="grid size-6 place-items-center text-xs text-muted hover:text-accent-ink disabled:opacity-30">▼</button>
+              </span>
+              {/* Small preview — full image (not cropped); click to see it big */}
+              <button type="button" onClick={() => setLightbox(i)} aria-label={t("preview")}
+                className={`shrink-0 overflow-hidden rounded-lg border border-line bg-surface-2 transition-opacity hover:opacity-90 ${o.is_active ? "" : "opacity-50"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={o.image_path} alt="" className="h-16 w-28 object-contain" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-ink">{o.caption || <span className="text-muted">{t("noCaption")}</span>}</p>
+                {o.link_url && (
+                  <a href={o.link_url} target="_blank" rel="noopener noreferrer" dir="ltr" className="block truncate text-xs text-accent-ink hover:underline">{o.link_url}</a>
+                )}
               </div>
+              <button onClick={() => toggle(o)} aria-label={o.is_active ? t("hide") : t("show")}>
+                <Badge tone={o.is_active ? "ok" : "muted"}>{o.is_active ? t("active") : t("hidden")}</Badge>
+              </button>
+              <Button variant="danger" onClick={() => remove(o)}>{c("delete")}</Button>
             </Card>
           ))}
         </div>
@@ -88,6 +91,10 @@ export default function OffersPage() {
           onClose={() => setAdding(false)}
           onSaved={() => { setAdding(false); reload(); notify(t("added")); }}
         />
+      )}
+
+      {lightbox !== null && offers[lightbox] && (
+        <OfferLightbox offers={offers} startIndex={lightbox} onClose={() => setLightbox(null)} />
       )}
     </div>
   );
