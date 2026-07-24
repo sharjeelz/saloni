@@ -400,13 +400,13 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
   const ready = !allStaff.loading && !detail.loading && selected !== null;
 
   return (
-    <Modal open onClose={onClose} title={`${t("assignStaff")} · ${locale === "en" && service.name_en ? service.name_en : service.name}`}>
-      {service.category && (
-        <div className="mb-3 flex items-center gap-2 text-sm text-muted">
-          {t("category")}:
+    <Modal open onClose={onClose} title={t("assignStaff")}>
+      <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-line pb-3">
+        <span className="font-medium text-ink">{locale === "en" && service.name_en ? service.name_en : service.name}</span>
+        {service.category && (
           <Badge tone="gold">{locale === "en" && service.category.name_en ? service.category.name_en : service.category.name}</Badge>
-        </div>
-      )}
+        )}
+      </div>
       {failed ? (
         <LoadError onRetry={() => { allStaff.reload(); detail.reload(); }} />
       ) : !ready ? (
