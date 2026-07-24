@@ -376,6 +376,7 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
   const t = useTranslations("app.services");
   const c = useTranslations("app.common");
   const nav = useTranslations("app.nav");
+  const locale = useLocale();
   const { notify } = useToast();
   const allStaff = useApi<{ data: StaffLite[] }>("/staff");
   const detail = useApi<{ data: { staff: StaffLite[] } }>(`/services/${service.id}`);
@@ -399,7 +400,13 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
   const ready = !allStaff.loading && !detail.loading && selected !== null;
 
   return (
-    <Modal open onClose={onClose} title={`${t("assignStaff")} · ${service.name}`}>
+    <Modal open onClose={onClose} title={`${t("assignStaff")} · ${locale === "en" && service.name_en ? service.name_en : service.name}`}>
+      {service.category && (
+        <div className="mb-3 flex items-center gap-2 text-sm text-muted">
+          {t("category")}:
+          <Badge tone="gold">{locale === "en" && service.category.name_en ? service.category.name_en : service.category.name}</Badge>
+        </div>
+      )}
       {failed ? (
         <LoadError onRetry={() => { allStaff.reload(); detail.reload(); }} />
       ) : !ready ? (
