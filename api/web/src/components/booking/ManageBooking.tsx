@@ -16,6 +16,7 @@ type Booking = {
   staff: { name: string } | null;
   branch: { name: string; address: string | null } | null;
   salon: { name: string; slug: string; brand_color: string | null; timezone: string } | null;
+  customer_note?: string | null;
 };
 type Slot = { time: string };
 
@@ -144,6 +145,12 @@ export default function ManageBooking({ token }: { token: string }) {
               <p className="mt-2 text-ink">{whenLabel(b.starts_at)}</p>
               {b.branch?.name && <p className="text-sm text-muted">{b.branch.name}</p>}
               <p className="mt-3 font-mono text-xs text-muted">{t("reference")}: <span dir="ltr">{b.reference}</span></p>
+              {b.customer_note && (
+                <div className="mt-3 border-t border-line pt-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">{t("yourNote")}</p>
+                  <p className="mt-1 text-sm text-ink">{b.customer_note}</p>
+                </div>
+              )}
             </div>
 
             {error && <p className="mt-4 rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
