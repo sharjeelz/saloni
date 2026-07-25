@@ -13,12 +13,12 @@ type Dashboard = {
   totals: { bookings: number; by_status: Record<string, number> };
   revenue: { collected: number; expected: number; currency: string };
   by_staff: { staff_id: number; staff: string; bookings: number; revenue: number }[];
-  by_service: { service_id: number; service: string; bookings: number; revenue: number }[];
+  by_service: { service_id: number; service: string; service_name_en: string | null; bookings: number; revenue: number }[];
   upcoming: {
     id: number;
     starts_at: string;
     customer: { name: string } | null;
-    service: { name: string } | null;
+    service: { name: string; name_en?: string | null } | null;
     staff: { name: string } | null;
   }[];
 };
@@ -177,7 +177,7 @@ export default function DashboardPage() {
         <RankCard title={t("byStaff")} unit={t("bookingsCol")}
           rows={data.by_staff.map((s) => ({ label: s.staff, value: s.bookings }))} max={maxStaff} />
         <RankCard title={t("byService")} unit={t("bookingsCol")}
-          rows={data.by_service.map((s) => ({ label: s.service, value: s.bookings }))} max={maxService} />
+          rows={data.by_service.map((s) => ({ label: locale === "en" && s.service_name_en ? s.service_name_en : s.service, value: s.bookings }))} max={maxService} />
       </section>
 
       {/* Upcoming */}
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                     </td>
                     <td className="py-2.5 pe-4 font-medium text-ink">{a.customer?.name}</td>
                     <td className="py-2.5 text-muted">
-                      {a.service?.name} · {t("with")} {a.staff?.name}
+                      {locale === "en" && a.service?.name_en ? a.service.name_en : a.service?.name} · {t("with")} {a.staff?.name}
                     </td>
                   </tr>
                 ))}

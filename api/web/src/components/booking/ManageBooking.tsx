@@ -12,7 +12,7 @@ type Booking = {
   reference: string;
   status: string;
   starts_at: string;
-  service: { name: string; duration_min: number } | null;
+  service: { name: string; name_en?: string | null; duration_min: number } | null;
   staff: { name: string } | null;
   branch: { name: string; address: string | null } | null;
   salon: { name: string; slug: string; brand_color: string | null; timezone: string } | null;
@@ -139,7 +139,7 @@ export default function ManageBooking({ token }: { token: string }) {
             </div>
 
             <div className="rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow)]">
-              <p className="font-medium text-ink">{b.service?.name}</p>
+              <p className="font-medium text-ink">{locale === "en" && b.service?.name_en ? b.service.name_en : b.service?.name}</p>
               <p className="text-sm text-muted">{t("with")} {b.staff?.name}</p>
               <p className="mt-2 text-ink">{whenLabel(b.starts_at)}</p>
               {b.branch?.name && <p className="text-sm text-muted">{b.branch.name}</p>}

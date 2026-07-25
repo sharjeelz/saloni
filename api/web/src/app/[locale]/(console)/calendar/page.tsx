@@ -15,7 +15,7 @@ type Appt = {
   id: number; starts_at: string; status: string;
   cancelled_by?: string | null; cancellation_reason?: string | null;
   customer: { name: string; phone: string } | null;
-  service: { name: string; duration_min: number } | null;
+  service: { name: string; name_en?: string | null; duration_min: number } | null;
   staff: { name: string } | null;
 };
 
@@ -102,7 +102,7 @@ export default function CalendarPage() {
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-medium text-ink">{a.customer?.name}</p>
-        <p className="text-sm text-muted">{a.service?.name} · {t("with")} {a.staff?.name}</p>
+        <p className="text-sm text-muted">{locale === "en" && a.service?.name_en ? a.service.name_en : a.service?.name} · {t("with")} {a.staff?.name}</p>
         {a.status === "cancelled" && (
           <p className="mt-0.5 text-sm text-muted">
             {a.cancelled_by === "customer" ? t("cbCustomer") : t("cbAdmin")}
@@ -214,9 +214,10 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
 }) {
   const t = useTranslations("app.calendar");
   const c = useTranslations("app.common");
+  const locale = useLocale();
   const { notify } = useToast();
   const branches = useApi<{ data: { id: number; name: string }[] }>("/branches");
-  const services = useApi<{ data: { id: number; name: string }[] }>("/services");
+  const services = useApi<{ data: { id: number; name: string; name_en?: string | null }[] }>("/services");
   const staff = useApi<{ data: { id: number; name: string }[] }>("/staff");
   const [form, setForm] = useState({
     branch_id: "", service_id: "", staff_id: "",
@@ -334,7 +335,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
           <Field label={t("service")}>
             <Select required value={form.service_id} onChange={set("service_id")}>
               <option value="" disabled>—</option>
-              {services.data!.data.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {services.data!.data.map((s) => <option key={s.id} value={s.id}>{locale === "en" && s.name_en ? s.name_en : s.name}</option>)}
             </Select>
           </Field>
           <Field label={t("staff")}>

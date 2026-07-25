@@ -187,7 +187,7 @@ class PublicBookingController extends Controller
             ? Appointment::where('customer_id', $customer->id)
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->where('starts_at', '>', now())
-                ->with(['service:id,name', 'staff:id,name'])
+                ->with(['service:id,name,name_en', 'staff:id,name'])
                 ->orderBy('starts_at')
                 ->get()
                 ->map(fn (Appointment $a) => [
@@ -196,6 +196,7 @@ class PublicBookingController extends Controller
                     'starts_at' => $a->starts_at,
                     'status' => $a->status,
                     'service' => $a->service?->name,
+                    'service_name_en' => $a->service?->name_en,
                     'staff' => $a->staff?->name,
                 ])
             : collect();
@@ -276,6 +277,7 @@ class PublicBookingController extends Controller
                 'manage_token' => $appointment->public_token, // for the manage link
                 'starts_at' => $appointment->starts_at,
                 'service' => $service->name,
+                'service_name_en' => $service->name_en,
                 'staff' => $staff->name,
             ],
         ], 201);
@@ -288,7 +290,7 @@ class PublicBookingController extends Controller
 
         return response()->json([
             'data' => $appointment->load(
-                'service:id,name,duration_min',
+                'service:id,name,name_en,duration_min',
                 'staff:id,name',
                 'branch:id,name,address',
                 'salon:id,name,slug,brand_color,timezone',

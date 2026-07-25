@@ -115,7 +115,7 @@ class CustomerController extends Controller
     {
         $customer->loadCount('appointments');
         $history = $customer->appointments()
-            ->with(['service:id,name', 'staff:id,name', 'branch:id,name'])
+            ->with(['service:id,name,name_en', 'staff:id,name', 'branch:id,name'])
             ->orderByDesc('starts_at')
             ->limit(50)
             ->get(['id', 'branch_id', 'service_id', 'staff_id', 'starts_at', 'status', 'price']);

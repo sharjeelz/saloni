@@ -15,7 +15,7 @@ type Customer = {
 };
 type HistoryItem = {
   id: number; starts_at: string; status: string; price: string;
-  service: { name: string } | null; staff: { name: string } | null;
+  service: { name: string; name_en?: string | null } | null; staff: { name: string } | null;
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -259,7 +259,7 @@ function CustomerDrawer({ customer, onClose, onSaved }: {
               {data.history.map((h) => (
                 <li key={h.id} className="flex items-center gap-3 py-2.5">
                   <span className="shrink-0 whitespace-nowrap font-mono text-xs text-accent-ink tnum" dir="ltr">{when(h.starts_at)}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{h.service?.name} · {h.staff?.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{locale === "en" && h.service?.name_en ? h.service.name_en : h.service?.name} · {h.staff?.name}</span>
                   <Badge tone={STATUS_TONE[h.status]}>{statusLabel(h.status)}</Badge>
                 </li>
               ))}

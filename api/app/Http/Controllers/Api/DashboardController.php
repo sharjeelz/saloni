@@ -34,7 +34,7 @@ class DashboardController extends Controller
         $from = Carbon::parse($data['from'] ?? Carbon::today($tz)->toDateString(), $tz)->startOfDay();
         $to = Carbon::parse($data['to'] ?? $from->format('Y-m-d'), $tz)->endOfDay();
 
-        $appts = Appointment::with(['staff:id,name', 'service:id,name'])
+        $appts = Appointment::with(['staff:id,name', 'service:id,name,name_en'])
             ->whereBetween('starts_at', [$from->clone()->utc(), $to->clone()->utc()])
             ->get();
 
@@ -55,6 +55,7 @@ class DashboardController extends Controller
         $byService = $appts->groupBy('service_id')->map(fn ($g) => [
             'service_id' => $g->first()->service_id,
             'service' => $g->first()->service?->name,
+            'service_name_en' => $g->first()->service?->name_en,
             'bookings' => $g->count(),
             'revenue' => $revenue($g),
         ])->sortByDesc('bookings')->values();
@@ -62,7 +63,7 @@ class DashboardController extends Controller
         // From midnight today in the salon's timezone (so an appointment earlier
         // today, even one in progress, still shows) — including pending ones the
         // owner still needs to confirm.
-        $upcoming = Appointment::with(['customer:id,name,phone', 'service:id,name', 'staff:id,name'])
+        $upcoming = Appointment::with(['customer:id,name,phone', 'service:id,name,name_en', 'staff:id,name'])
             ->whereIn('status', ['confirmed', 'pending'])
             ->where('starts_at', '>=', Carbon::today($tz)->utc())
             ->orderBy('starts_at')

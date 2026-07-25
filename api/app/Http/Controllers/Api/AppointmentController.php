@@ -35,7 +35,7 @@ class AppointmentController extends Controller
             'reference' => ['nullable', 'string', 'max:12'],
         ]);
 
-        $query = Appointment::with(['customer:id,name,phone', 'service:id,name,duration_min', 'staff:id,name'])
+        $query = Appointment::with(['customer:id,name,phone', 'service:id,name,name_en,duration_min', 'staff:id,name'])
             ->when($user->isStaff(), fn ($q) => $q->where('staff_id', $user->id));
 
         if (! empty($data['reference'])) {
@@ -63,7 +63,7 @@ class AppointmentController extends Controller
         $this->authorizeAppointment($request, $appointment);
 
         return response()->json([
-            'data' => $appointment->load(['customer', 'service:id,name,duration_min,price', 'staff:id,name', 'branch:id,name']),
+            'data' => $appointment->load(['customer', 'service:id,name,name_en,duration_min,price', 'staff:id,name', 'branch:id,name']),
         ]);
     }
 
@@ -99,7 +99,7 @@ class AppointmentController extends Controller
             return response()->json(['message' => $e->getMessage()], 409);
         }
 
-        return response()->json(['data' => $appointment->load('customer:id,name,phone', 'service:id,name')], 201);
+        return response()->json(['data' => $appointment->load('customer:id,name,phone', 'service:id,name,name_en')], 201);
     }
 
     /** Mark done / no-show / cancelled / confirmed (E7-3). */
