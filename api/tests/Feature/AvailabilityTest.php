@@ -133,10 +133,19 @@ class AvailabilityTest extends TestCase
         $this->assertSame([], $this->times());
     }
 
-    public function test_staff_not_assigned_to_service_are_excluded(): void
+    public function test_non_specialist_is_excluded_when_a_service_has_assigned_staff(): void
     {
-        $this->service->staff()->detach($this->staff->id);
-        $this->assertSame([], $this->times());
+        // A second branch worker who is NOT assigned to this service.
+        Tenancy::set($this->salon);
+        $other = User::factory()->create(['salon_id' => $this->salon->id, 'role' => 'staff', 'name' => 'Noor']);
+        $this->branch->staff()->attach($other->id);
+        Tenancy::clear();
+
+        // The service still has Lina assigned → specialist mode → only Lina, not Noor.
+        $slots = app(AvailabilityService::class)->slots($this->branch, $this->service, null, $this->date->format('Y-m-d'));
+        $ids = collect($slots)->flatMap(fn ($s) => collect($s['staff'])->pluck('id'))->unique()->values()->all();
+
+        $this->assertSame([$this->staff->id], $ids);
     }
 
     public function test_staff_specific_hours_override_branch_hours(): void
@@ -218,12 +227,29 @@ class AvailabilityTest extends TestCase
         $this->assertSame('full', $this->reason());
     }
 
-    public function test_reason_is_no_staff_when_nobody_performs_the_service(): void
+    public function test_service_with_no_assigned_staff_is_bookable_by_any_branch_worker(): void
     {
+        // A service nobody is explicitly assigned to; the branch already has Lina.
+        Tenancy::set($this->salon);
+        $orphan = Service::create(['salon_id' => $this->salon->id, 'name' => 'Blowdry', 'duration_min' => 60, 'price' => 80]);
+        Tenancy::clear();
+
+        $slots = app(AvailabilityService::class)->slots($this->branch, $orphan, null, $this->date->format('Y-m-d'));
+
+        $this->assertNotEmpty($slots); // simple booking — any branch worker can do it
+        $this->assertSame($this->staff->id, $slots[0]['staff'][0]['id']);
+    }
+
+    public function test_reason_is_no_staff_only_when_the_branch_has_no_workers(): void
+    {
+        // Orphan service AND no worker attached to the branch → genuinely un-bookable.
+        Tenancy::set($this->salon);
         $orphan = Service::create(['salon_id' => $this->salon->id, 'name' => 'Nails', 'duration_min' => 30, 'price' => 50]);
+        $bareBranch = \App\Models\Branch::create(['name' => 'Empty', 'salon_id' => $this->salon->id]);
+        Tenancy::clear();
         $svc = app(AvailabilityService::class);
 
-        $this->assertSame('no_staff', $svc->reasonForNoSlots($this->branch, $orphan, null, $this->date->format('Y-m-d')));
+        $this->assertSame('no_staff', $svc->reasonForNoSlots($bareBranch, $orphan, null, $this->date->format('Y-m-d')));
     }
 
     public function test_public_availability_returns_a_reason_when_empty(): void

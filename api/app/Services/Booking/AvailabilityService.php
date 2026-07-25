@@ -157,13 +157,20 @@ class AvailabilityService
         return false;
     }
 
-    /** Staff who can perform this service AND work at this branch. */
+    /**
+     * Staff who can perform this service at this branch. If nobody is explicitly
+     * assigned to the service, any of the branch's workers can do it ("simple
+     * booking" — the salon assigns internally). Assign staff to a service to
+     * restrict it to specialists.
+     */
     protected function eligibleStaff(Branch $branch, Service $service, ?int $staffId): Collection
     {
+        $restrictToSpecialists = $service->staff()->exists();
+
         return User::query()
             ->where('role', 'staff')
             ->where('is_active', true)
-            ->whereHas('services', fn ($q) => $q->where('services.id', $service->id))
+            ->when($restrictToSpecialists, fn ($q) => $q->whereHas('services', fn ($s) => $s->where('services.id', $service->id)))
             ->whereHas('branches', fn ($q) => $q->where('branches.id', $branch->id))
             ->when($staffId, fn ($q) => $q->where('id', $staffId))
             ->get(['id', 'name']);

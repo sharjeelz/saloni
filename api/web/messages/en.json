@@ -285,6 +285,8 @@
       "servicesCount": "{n} services",
       "performedBy": "Performed by",
       "noneYet": "Not set",
+      "anyTeam": "Any team member",
+      "anyTeamHint": "Leave everyone unchecked and any team member can perform this — the salon decides who on the day.",
       "noStaffYet": "No staff yet — invite your team first.",
       "branchHint": "A staff member becomes bookable once they also work at a branch (Branches → Assign staff).",
       "nameEn": "English name (optional)",

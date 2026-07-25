@@ -168,7 +168,7 @@ export default function ServicesPage() {
                 <p className="mt-0.5 text-sm text-muted">
                   {t("performedBy")}:{" "}
                   <span className="text-ink">
-                    {s.staff && s.staff.length > 0 ? s.staff.map((m) => m.name).join(locale === "ar" ? "، " : ", ") : t("noneYet")}
+                    {s.staff && s.staff.length > 0 ? s.staff.map((m) => m.name).join(locale === "ar" ? "، " : ", ") : t("anyTeam")}
                   </span>
                 </p>
               </div>
@@ -420,6 +420,7 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
+          <p className="mb-1 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted">{t("anyTeamHint")}</p>
           <p className="mb-1 text-xs text-muted">{t("branchHint")}</p>
           {staffList.map((s) => (
             <label key={s.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-2">
