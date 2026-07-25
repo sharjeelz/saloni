@@ -107,13 +107,13 @@ class NotificationsAndDashboardTest extends TestCase
 
         $this->assertNotNull($due->fresh()->reminder_sent_at);
         $this->assertNull($far->fresh()->reminder_sent_at);
-        $reminders = array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'Reminder'));
+        $reminders = array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'تذكير'));
         $this->assertCount(1, $reminders);
 
         // Running again does not re-send.
         $this->sms->sent = [];
         $this->artisan('appointments:send-reminders')->assertSuccessful();
-        $this->assertCount(0, array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'Reminder')));
+        $this->assertCount(0, array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'تذكير')));
     }
 
     public function test_cancelled_appointments_get_no_reminder(): void
@@ -139,7 +139,7 @@ class NotificationsAndDashboardTest extends TestCase
             'date' => $ctx['date']->format('Y-m-d'), 'time' => '10:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $code,
         ])->assertCreated();
 
-        $toOwner = array_filter($this->sms->sent, fn ($m) => $m['to'] === '+966500000001' && str_contains($m['message'], 'New booking'));
+        $toOwner = array_filter($this->sms->sent, fn ($m) => $m['to'] === '+966500000001' && str_contains($m['message'], 'حجز جديد'));
         $this->assertCount(1, $toOwner);
         // Customer also got their confirmation.
         $this->assertNotEmpty(array_filter($this->sms->sent, fn ($m) => $m['to'] === $phone));
@@ -160,11 +160,11 @@ class NotificationsAndDashboardTest extends TestCase
 
         // Confirmation + owner alert went out over WhatsApp.
         $this->assertNotEmpty(array_filter($this->whatsapp->sent, fn ($m) => $m['to'] === $phone));
-        $this->assertNotEmpty(array_filter($this->whatsapp->sent, fn ($m) => str_contains($m['message'], 'New booking')));
+        $this->assertNotEmpty(array_filter($this->whatsapp->sent, fn ($m) => str_contains($m['message'], 'حجز جديد')));
 
         // The OTP still went over SMS; booking notifications did not.
-        $this->assertEmpty(array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'New booking')));
-        $this->assertEmpty(array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'confirmed for')));
+        $this->assertEmpty(array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'حجز جديد')));
+        $this->assertEmpty(array_filter($this->sms->sent, fn ($m) => str_contains($m['message'], 'تم تأكيد')));
     }
 
     // ---- E11: dashboard -------------------------------------------------------
@@ -213,7 +213,7 @@ class NotificationsAndDashboardTest extends TestCase
 
         $this->assertNotEmpty(array_filter(
             $this->sms->sent,
-            fn ($m) => $m['to'] === $phone && str_contains($m['message'], 'confirmed for'),
+            fn ($m) => $m['to'] === $phone && str_contains($m['message'], 'تم تأكيد'),
         ));
     }
 
@@ -226,7 +226,7 @@ class NotificationsAndDashboardTest extends TestCase
 
         $this->assertNotEmpty(array_filter(
             $this->sms->sent,
-            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'Cancelled by customer'),
+            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'ألغى العميل'),
         ));
     }
 
@@ -242,11 +242,11 @@ class NotificationsAndDashboardTest extends TestCase
         $customerPhone = $appt->customer->phone;
         $this->assertNotEmpty(array_filter(
             $this->sms->sent,
-            fn ($m) => $m['to'] === $customerPhone && str_contains($m['message'], 'is now'),
+            fn ($m) => $m['to'] === $customerPhone && str_contains($m['message'], 'تم تغيير موعدك'),
         ));
         $this->assertNotEmpty(array_filter(
             $this->sms->sent,
-            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'Rescheduled by customer'),
+            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'غيّر العميل'),
         ));
     }
 
@@ -260,7 +260,30 @@ class NotificationsAndDashboardTest extends TestCase
 
         $this->assertNotEmpty(array_filter(
             $this->sms->sent,
-            fn ($m) => $m['to'] === $appt->customer->phone && str_contains($m['message'], 'has been cancelled'),
+            fn ($m) => $m['to'] === $appt->customer->phone && str_contains($m['message'], 'تم إلغاء موعدك'),
+        ));
+    }
+
+    public function test_messages_follow_the_salon_language_setting(): void
+    {
+        $ctx = $this->makeSalon();
+        $ctx['salon']->update(['locale' => 'en']); // switch this salon to English
+
+        $phone = '+966501112233';
+        $code = $this->postJson('/api/book/glow/otp', ['phone' => $phone])->json('debug_code');
+        $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $ctx['branch']->id, 'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
+            'date' => $ctx['date']->format('Y-m-d'), 'time' => '10:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $code,
+        ])->assertCreated();
+
+        // Customer confirmation + owner alert are now in English.
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $phone && str_contains($m['message'], 'is confirmed for'),
+        ));
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'New booking'),
         ));
     }
 }

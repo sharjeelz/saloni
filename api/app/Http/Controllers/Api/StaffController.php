@@ -56,11 +56,12 @@ class StaffController extends Controller
             'password' => bin2hex(random_bytes(16)),
         ]);
 
-        $salonName = optional($request->user()->salon)->name ?? 'the salon';
+        $salon = $request->user()->salon;
+        $salonName = $salon?->name ?? 'the salon';
+        $locale = in_array($salon?->locale, ['ar', 'en'], true) ? $salon->locale : 'ar';
         $this->sms->send(
             $data['phone'],
-            "You've been added to {$salonName} on Salon. "
-            . 'Sign in with your phone number to get started.'
+            trans('sms.staff_invite', ['salon' => $salonName], $locale),
         );
 
         return response()->json([

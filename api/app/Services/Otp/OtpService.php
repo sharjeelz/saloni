@@ -3,6 +3,7 @@
 namespace App\Services\Otp;
 
 use App\Models\OtpCode;
+use App\Models\Salon;
 use App\Services\Sms\SmsSender;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -57,8 +58,14 @@ class OtpService
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
         ]);
 
-        $message = "Your Salon verification code is {$code}. It expires in "
-            . self::TTL_MINUTES . ' minutes.';
+        // Render in the salon's language when we know the salon (booking OTP);
+        // login OTP has no salon yet, so fall back to Arabic (KSA default).
+        $locale = $salonId
+            ? (Salon::find($salonId)?->locale ?? 'ar')
+            : 'ar';
+        $locale = in_array($locale, ['ar', 'en'], true) ? $locale : 'ar';
+
+        $message = trans('sms.otp', ['code' => $code, 'minutes' => self::TTL_MINUTES], $locale);
 
         if ($channel === 'phone') {
             $this->sms->send($destination, $message);

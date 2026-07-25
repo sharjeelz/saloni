@@ -177,6 +177,7 @@
       "notifChannelHint": "How booking confirmations and reminders are sent. Verification codes always go by SMS.",
       "timezone": "Timezone",
       "locale": "Default language",
+      "localeHint": "Customer messages — confirmations, reminders, verification codes — are sent in this language.",
       "logo": "Logo URL",
       "arabic": "Arabic",
       "english": "English",

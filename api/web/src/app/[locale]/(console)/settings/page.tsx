@@ -110,6 +110,7 @@ export default function SettingsPage() {
               </Select>
             </Field>
           </div>
+          <p className="-mt-1 text-xs text-muted">{t("localeHint")}</p>
           <Field label={t("brandColor")}>
             <div className="flex items-center gap-3">
               <input
