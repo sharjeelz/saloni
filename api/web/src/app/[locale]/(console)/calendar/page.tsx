@@ -17,6 +17,7 @@ type Appt = {
   customer: { name: string; phone: string } | null;
   service: { name: string; name_en?: string | null; duration_min: number } | null;
   staff: { name: string } | null;
+  customer_note?: string | null;
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -107,6 +108,12 @@ export default function CalendarPage() {
           <p className="mt-0.5 text-sm text-muted">
             {a.cancelled_by === "customer" ? t("cbCustomer") : t("cbAdmin")}
             {a.cancellation_reason ? ` · ${a.cancellation_reason}` : ""}
+          </p>
+        )}
+        {a.customer_note && (
+          <p className="mt-1 flex items-start gap-1.5 rounded-lg bg-gold-soft px-2.5 py-1.5 text-sm text-ink">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0 text-gold"><path d="M4 5h16M4 12h16M4 19h10" /></svg>
+            <span className="min-w-0">{a.customer_note}</span>
           </p>
         )}
       </div>
@@ -221,7 +228,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
   const staff = useApi<{ data: { id: number; name: string }[] }>("/staff");
   const [form, setForm] = useState({
     branch_id: "", service_id: "", staff_id: "",
-    customer_name: "", customer_phone: "", date: defaultDate, time: "",
+    customer_name: "", customer_phone: "", date: defaultDate, time: "", note: "",
   });
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -276,6 +283,7 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
       await post("/appointments", {
         branch_id: Number(form.branch_id), service_id: Number(form.service_id), staff_id: Number(form.staff_id),
         customer_name: form.customer_name, customer_phone: form.customer_phone, date: form.date, time: form.time,
+        note: form.note.trim() || undefined,
       });
       onSaved();
     } catch (err) {
@@ -377,6 +385,17 @@ function WalkInModal({ slug, defaultDate, onClose, onSaved }: {
             </div>
           )}
         </div>
+
+        <Field label={t("note")}>
+          <textarea
+            rows={2}
+            maxLength={500}
+            placeholder={t("notePlaceholder")}
+            value={form.note}
+            onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+            className="w-full resize-none rounded-xl border border-line bg-surface px-3.5 py-2.5 text-ink outline-none placeholder:text-muted/60 focus:border-accent"
+          />
+        </Field>
 
         <div className="mt-1 flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>{c("cancel")}</Button>

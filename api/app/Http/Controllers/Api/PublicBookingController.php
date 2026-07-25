@@ -221,6 +221,7 @@ class PublicBookingController extends Controller
             'name' => ['required', 'string', 'min:2', 'max:255'],
             'phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'code' => ['required', 'string', 'size:6'],
+            'note' => ['nullable', 'string', 'max:500'],
         ]);
 
         if (! $this->otp->verify('phone', $data['phone'], $data['code'], 'booking', Tenancy::id())) {
@@ -261,7 +262,8 @@ class PublicBookingController extends Controller
 
         try {
             $appointment = $this->booking->book(
-                $branch, $service, $staff, $customer, $data['date'], $data['time'], source: 'online',
+                $branch, $service, $staff, $customer, $data['date'], $data['time'],
+                source: 'online', note: $data['note'] ?? null,
             );
         } catch (SlotUnavailableException $e) {
             return response()->json(['message' => $e->getMessage()], 409);

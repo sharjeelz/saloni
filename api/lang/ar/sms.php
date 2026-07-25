@@ -13,6 +13,7 @@ return [
     'owner_new'        => 'حجز جديد: :customer — :service مع :staff — :when.',
     'owner_cancelled'  => 'ألغى العميل الحجز: :customer — :service مع :staff — :when.',
     'owner_reschedule' => 'غيّر العميل موعده: :customer — :service مع :staff — الآن :when.',
+    'note'             => 'ملاحظة: :note',
 
     // الحساب
     'otp'          => 'رمز التحقق الخاص بك هو :code. ينتهي خلال :minutes دقائق.',

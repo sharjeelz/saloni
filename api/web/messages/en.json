@@ -56,6 +56,8 @@
     "yourDetails": "Your details",
     "name": "Full name",
     "phone": "Mobile number",
+    "note": "Anything we should know? (optional)",
+    "notePlaceholder": "Allergies, preferences, running late…",
     "sendCode": "Send code",
     "sending": "Sending…",
     "verify": "Verify your number",
@@ -370,6 +372,8 @@
       "chooseSlot": "Available times",
       "noSlots": "No available times — check the branch hours and staff.",
       "pickFirst": "Choose branch, service, staff and date to see available times.",
+      "note": "Note (optional)",
+      "notePlaceholder": "Allergies, preferences, running late…",
       "with": "with"
     },
     "billing": {

@@ -14,7 +14,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'public_token', 'reference', 'salon_id', 'branch_id', 'customer_id', 'service_id', 'staff_id',
-        'starts_at', 'ends_at', 'status', 'source', 'price', 'notes', 'cancelled_at',
+        'starts_at', 'ends_at', 'status', 'source', 'price', 'notes', 'customer_note', 'cancelled_at',
         'cancelled_by', 'cancellation_reason', 'reminder_sent_at',
     ];
 

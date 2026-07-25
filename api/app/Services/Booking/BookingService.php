@@ -36,6 +36,7 @@ class BookingService
         string $date,
         string $time,
         string $source = 'online',
+        ?string $note = null,
     ): Appointment {
         $tz = $branch->salon->timezone ?? 'Asia/Riyadh';
         $localStart = Carbon::parse("$date $time", $tz);
@@ -50,7 +51,7 @@ class BookingService
         $end = $localStart->clone()->addMinutes((int) $service->duration_min)->utc();
 
         try {
-            return DB::transaction(function () use ($branch, $service, $staff, $customer, $start, $end, $source) {
+            return DB::transaction(function () use ($branch, $service, $staff, $customer, $start, $end, $source, $note) {
                 // Lock the staff's overlapping rows to serialize concurrent bookings.
                 $conflict = Appointment::where('staff_id', $staff->id)
                     ->where('status', '!=', 'cancelled')
@@ -75,6 +76,7 @@ class BookingService
                     'status' => 'confirmed',
                     'source' => $source,
                     'price' => $service->price,
+                    'customer_note' => $note,
                 ]);
             });
         } catch (QueryException $e) {

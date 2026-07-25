@@ -109,7 +109,8 @@ class BookingNotifier
     /** Alert the salon's owners when a new online booking lands (E8-3). */
     public function notifyOwners(Appointment $appointment): void
     {
-        $this->sendToOwners($appointment, 'sms.owner_new');
+        // Surface the customer's note so the salon can prepare before they arrive.
+        $this->sendToOwners($appointment, 'sms.owner_new', withNote: true);
     }
 
     /** Alert owners that a customer cancelled their own booking (E6-4). */
@@ -125,7 +126,7 @@ class BookingNotifier
     }
 
     /** Send one owner-facing line to every active owner of the salon. */
-    protected function sendToOwners(Appointment $appointment, string $key): void
+    protected function sendToOwners(Appointment $appointment, string $key, bool $withNote = false): void
     {
         $appointment->loadMissing('salon', 'service', 'staff', 'customer');
         $salon = $appointment->salon;
@@ -136,6 +137,10 @@ class BookingNotifier
             'staff' => $appointment->staff->name,
             'when' => $this->when($appointment),
         ]);
+
+        if ($withNote && filled($appointment->customer_note)) {
+            $message .= ' ' . $this->line($salon, 'sms.note', ['note' => $appointment->customer_note]);
+        }
 
         // Scope to this appointment's salon explicitly (not ambient tenant),
         // so an untenanted caller can't blast every salon's owners.

@@ -13,6 +13,7 @@ return [
     'owner_new'        => 'New booking: :customer — :service with :staff on :when.',
     'owner_cancelled'  => 'Cancelled by customer: :customer — :service with :staff on :when.',
     'owner_reschedule' => 'Rescheduled by customer: :customer — :service with :staff, now :when.',
+    'note'             => 'Note: :note',
 
     // Account
     'otp'          => 'Your verification code is :code. It expires in :minutes minutes.',

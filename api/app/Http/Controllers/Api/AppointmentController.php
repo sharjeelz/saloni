@@ -85,6 +85,7 @@ class AppointmentController extends Controller
             'customer_phone' => ['required', 'string', 'max:20', \App\Support\ValidationRules::PHONE],
             'date' => ['required', 'date_format:Y-m-d'],
             'time' => ['required', 'date_format:H:i'],
+            'note' => ['nullable', 'string', 'max:500'],
         ]);
 
         $customer = $this->booking->resolveCustomer($data['customer_name'], $data['customer_phone']);
@@ -98,6 +99,7 @@ class AppointmentController extends Controller
                 $data['date'],
                 $data['time'],
                 source: 'walk_in',
+                note: $data['note'] ?? null,
             );
         } catch (SlotUnavailableException $e) {
             return response()->json(['message' => $e->getMessage()], 409);

@@ -264,6 +264,32 @@ class NotificationsAndDashboardTest extends TestCase
         ));
     }
 
+    public function test_customer_note_is_stored_and_sent_to_owners(): void
+    {
+        $ctx = $this->makeSalon();
+        $phone = '+966508887766';
+        $code = $this->postJson('/api/book/glow/otp', ['phone' => $phone])->json('debug_code');
+
+        $this->postJson('/api/book/glow/appointments', [
+            'branch_id' => $ctx['branch']->id, 'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
+            'date' => $ctx['date']->format('Y-m-d'), 'time' => '10:00', 'name' => 'Sara', 'phone' => $phone, 'code' => $code,
+            'note' => 'أعاني من حساسية، يرجى استخدام منتجات خالية من العطور',
+        ])->assertCreated();
+
+        Tenancy::set($ctx['salon']);
+        $this->assertSame(
+            'أعاني من حساسية، يرجى استخدام منتجات خالية من العطور',
+            Appointment::where('customer_id', Customer::where('phone', $phone)->first()->id)->first()->customer_note,
+        );
+        Tenancy::clear();
+
+        // The owner alert carries the note so the salon can prepare.
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'ملاحظة:'),
+        ));
+    }
+
     public function test_messages_follow_the_salon_language_setting(): void
     {
         $ctx = $this->makeSalon();
