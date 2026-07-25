@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\Salon;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\Booking\BookingNotifier;
 use App\Services\Booking\BookingService;
 use Illuminate\Database\QueryException;
 use App\Support\Tenancy;
@@ -19,7 +20,10 @@ use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
-    public function __construct(protected BookingService $booking) {}
+    public function __construct(
+        protected BookingService $booking,
+        protected BookingNotifier $notifier,
+    ) {}
 
     /** Calendar feed (E7-1). Owners see the whole salon; staff see their own. */
     public function index(Request $request): JsonResponse
@@ -99,6 +103,8 @@ class AppointmentController extends Controller
             return response()->json(['message' => $e->getMessage()], 409);
         }
 
+        $this->notifier->walkInConfirmation($appointment);
+
         return response()->json(['data' => $appointment->load('customer:id,name,phone', 'service:id,name,name_en')], 201);
     }
 
@@ -113,6 +119,7 @@ class AppointmentController extends Controller
         ]);
 
         $status = $data['status'];
+        $wasCancelled = $appointment->status === 'cancelled';
         $appointment->status = $status;
 
         if ($status === 'cancelled') {
@@ -139,6 +146,12 @@ class AppointmentController extends Controller
                 return response()->json(['message' => 'That time was booked by someone else.'], 409);
             }
             throw $e;
+        }
+
+        // Tell the customer only on the transition INTO cancelled (not on a
+        // re-cancel or other status change).
+        if ($status === 'cancelled' && ! $wasCancelled) {
+            $this->notifier->cancelledBySalon($appointment);
         }
 
         return response()->json(['data' => $appointment]);

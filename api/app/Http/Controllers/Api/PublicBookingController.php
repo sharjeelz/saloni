@@ -338,6 +338,8 @@ class PublicBookingController extends Controller
             'cancelled_by' => 'customer',
         ]);
 
+        $this->notifier->ownerBookingCancelled($appointment);
+
         return response()->json(['message' => 'Booking cancelled.']);
     }
 
@@ -358,6 +360,9 @@ class PublicBookingController extends Controller
         } catch (SlotUnavailableException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
+
+        $this->notifier->rescheduled($appointment);          // customer: new time
+        $this->notifier->ownerBookingRescheduled($appointment); // owners: heads-up
 
         return response()->json([
             'message' => 'Booking rescheduled.',

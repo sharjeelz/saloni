@@ -41,8 +41,72 @@ class BookingNotifier
         return $salon->notification_channel === 'whatsapp' ? $this->whatsapp : $this->sms;
     }
 
+    /** Confirmation for a walk-in / manually created booking (E7-2). */
+    public function walkInConfirmation(Appointment $appointment): void
+    {
+        // Same message as an online confirmation — the customer still gets their
+        // time and reference to keep.
+        $this->confirmation($appointment);
+    }
+
+    /** The booking moved to a new time — tell the customer its new slot (E6-4). */
+    public function rescheduled(Appointment $appointment): void
+    {
+        $appointment->loadMissing('salon', 'service', 'staff', 'customer');
+        $salon = $appointment->salon;
+
+        $this->channel($salon)->send(
+            $appointment->customer->phone,
+            "{$salon->name}: your {$appointment->service->name} with {$appointment->staff->name} "
+            . "is now {$this->when($appointment)}. Ref {$appointment->reference}.",
+        );
+    }
+
+    /** The salon cancelled the customer's booking — let the customer know (E7-3). */
+    public function cancelledBySalon(Appointment $appointment): void
+    {
+        $appointment->loadMissing('salon', 'service', 'staff', 'customer');
+        $salon = $appointment->salon;
+
+        $this->channel($salon)->send(
+            $appointment->customer->phone,
+            "{$salon->name}: your {$appointment->service->name} on {$this->when($appointment)} "
+            . 'has been cancelled. Please contact us to rebook.',
+        );
+    }
+
     /** Alert the salon's owners when a new online booking lands (E8-3). */
     public function notifyOwners(Appointment $appointment): void
+    {
+        $this->sendToOwners(
+            $appointment,
+            "New booking: {$appointment->customer->name} — {$appointment->service->name} "
+            . "with {$appointment->staff->name} on {$this->when($appointment)}.",
+        );
+    }
+
+    /** Alert owners that a customer cancelled their own booking (E6-4). */
+    public function ownerBookingCancelled(Appointment $appointment): void
+    {
+        $this->sendToOwners(
+            $appointment,
+            "Cancelled by customer: {$appointment->customer->name} — {$appointment->service->name} "
+            . "with {$appointment->staff->name} on {$this->when($appointment)}.",
+        );
+    }
+
+    /** Alert owners that a customer moved their own booking (E6-4). */
+    public function ownerBookingRescheduled(Appointment $appointment): void
+    {
+        $this->sendToOwners(
+            $appointment,
+            "Rescheduled by customer: {$appointment->customer->name} — {$appointment->service->name} "
+            . "with {$appointment->staff->name}, now {$this->when($appointment)}.",
+        );
+    }
+
+    /** Send one message to every active owner of the appointment's salon. */
+    protected function sendToOwners(Appointment $appointment, string $message): void
     {
         $appointment->loadMissing('salon', 'service', 'staff', 'customer');
 
@@ -56,11 +120,7 @@ class BookingNotifier
         $channel = $this->channel($appointment->salon);
 
         foreach ($owners as $owner) {
-            $channel->send(
-                $owner->phone,
-                "New booking: {$appointment->customer->name} — {$appointment->service->name} "
-                . "with {$appointment->staff->name} on {$this->when($appointment)}.",
-            );
+            $channel->send($owner->phone, $message);
         }
     }
 

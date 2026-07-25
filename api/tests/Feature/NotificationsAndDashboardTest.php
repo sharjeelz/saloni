@@ -86,6 +86,7 @@ class NotificationsAndDashboardTest extends TestCase
             'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
             'starts_at' => $start->clone()->utc(), 'ends_at' => $start->clone()->addMinutes(60)->utc(),
             'status' => $status, 'source' => 'online', 'price' => 100, 'reminder_sent_at' => $reminderSent,
+            'public_token' => (string) \Illuminate\Support\Str::uuid(), 'reference' => strtoupper(\Illuminate\Support\Str::random(6)),
         ]);
         Tenancy::clear();
 
@@ -194,5 +195,72 @@ class NotificationsAndDashboardTest extends TestCase
         $ctx = $this->makeSalon();
         Sanctum::actingAs($ctx['staff']);
         $this->getJson('/api/dashboard')->assertForbidden();
+    }
+
+    // ---- notifications on later booking changes -------------------------------
+
+    public function test_walk_in_texts_the_customer_a_confirmation(): void
+    {
+        $ctx = $this->makeSalon();
+        Sanctum::actingAs($ctx['owner']);
+
+        $phone = '+966509876543';
+        $this->postJson('/api/appointments', [
+            'branch_id' => $ctx['branch']->id, 'service_id' => $ctx['service']->id, 'staff_id' => $ctx['staff']->id,
+            'customer_name' => 'Mona', 'customer_phone' => $phone,
+            'date' => $ctx['date']->format('Y-m-d'), 'time' => '11:00',
+        ])->assertCreated();
+
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $phone && str_contains($m['message'], 'confirmed for'),
+        ));
+    }
+
+    public function test_customer_cancel_alerts_the_owner(): void
+    {
+        $ctx = $this->makeSalon();
+        $appt = $this->appointment($ctx, 'confirmed', $ctx['date']->clone()->setTime(10, 0));
+
+        $this->postJson("/api/book/manage/{$appt->public_token}/cancel")->assertOk();
+
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'Cancelled by customer'),
+        ));
+    }
+
+    public function test_customer_reschedule_texts_customer_and_owner(): void
+    {
+        $ctx = $this->makeSalon();
+        $appt = $this->appointment($ctx, 'confirmed', $ctx['date']->clone()->setTime(10, 0));
+
+        $this->postJson("/api/book/manage/{$appt->public_token}/reschedule", [
+            'date' => $ctx['date']->format('Y-m-d'), 'time' => '12:00',
+        ])->assertOk();
+
+        $customerPhone = $appt->customer->phone;
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $customerPhone && str_contains($m['message'], 'is now'),
+        ));
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $ctx['owner']->phone && str_contains($m['message'], 'Rescheduled by customer'),
+        ));
+    }
+
+    public function test_salon_cancel_texts_the_customer(): void
+    {
+        $ctx = $this->makeSalon();
+        $appt = $this->appointment($ctx, 'confirmed', $ctx['date']->clone()->setTime(10, 0));
+
+        Sanctum::actingAs($ctx['owner']);
+        $this->patchJson("/api/appointments/{$appt->id}/status", ['status' => 'cancelled'])->assertOk();
+
+        $this->assertNotEmpty(array_filter(
+            $this->sms->sent,
+            fn ($m) => $m['to'] === $appt->customer->phone && str_contains($m['message'], 'has been cancelled'),
+        ));
     }
 }
