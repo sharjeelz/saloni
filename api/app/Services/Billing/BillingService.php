@@ -17,8 +17,8 @@ class BillingService
 {
     public function __construct(protected PaymentGateway $gateway) {}
 
-    /** Subscribe (or switch plan). Charges the source, then activates. */
-    public function subscribe(Salon $salon, string $planKey, ?string $source): array
+    /** Subscribe (or switch plan). Charges the source, then activates for $months. */
+    public function subscribe(Salon $salon, string $planKey, ?string $source, int $months = 1): array
     {
         [$plan, $price, $vat, $total, $currency] = $this->priceFor($planKey);
 
@@ -40,7 +40,7 @@ class BillingService
                 'currency' => $currency,
                 'trial_ends_at' => $salon->trial_ends_at,
                 'current_period_start' => now(),
-                'current_period_end' => now()->addMonth(),
+                'current_period_end' => now()->addMonths(max(1, $months)),
                 'gateway' => config('payments.gateway'),
                 'gateway_reference' => $result->reference,
                 'card_brand' => $result->cardBrand,

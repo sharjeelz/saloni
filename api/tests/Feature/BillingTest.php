@@ -15,6 +15,13 @@ class BillingTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // These cover the self-serve checkout flow (live-gateway mode).
+        config(['payments.self_serve' => true]);
+    }
+
     protected function makeSalon(): array
     {
         $salon = Salon::create(['name' => 'Glow', 'slug' => 'glow', 'trial_ends_at' => now()->addDays(10)]);
@@ -113,6 +120,48 @@ class BillingTest extends TestCase
         Tenancy::set($salon);
         $this->assertSame(1, Invoice::count()); // renewal invoice issued
         Tenancy::clear();
+    }
+
+    public function test_manual_mode_blocks_self_serve_and_shows_support(): void
+    {
+        config(['payments.self_serve' => false, 'payments.support.whatsapp' => '966500000000']);
+        [, $owner] = $this->makeSalon();
+        Sanctum::actingAs($owner);
+
+        // The console learns it's manual and where to send the salon.
+        $this->getJson('/api/billing')->assertOk()
+            ->assertJsonPath('self_serve', false)
+            ->assertJsonPath('support.whatsapp', '966500000000');
+
+        // The self-serve endpoints are closed so nobody can mint a free plan.
+        $this->postJson('/api/billing/subscribe', ['plan' => 'basic'])->assertStatus(403);
+        $this->postJson('/api/billing/cancel')->assertStatus(403);
+        $this->assertDatabaseCount('subscriptions', 0);
+    }
+
+    public function test_admin_command_activates_a_plan_and_issues_an_invoice(): void
+    {
+        [$salon] = $this->makeSalon();
+
+        $this->artisan('billing:activate', ['salon' => 'glow', 'plan' => 'basic', '--months' => 3])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('subscriptions', [
+            'salon_id' => $salon->id, 'plan' => 'basic', 'status' => 'active',
+        ]);
+
+        Tenancy::set($salon);
+        $sub = Subscription::first();
+        // --months=3 granted, so the period reaches well past a single month.
+        $this->assertTrue($sub->current_period_end->gt(now()->addDays(80)));
+        $this->assertSame(1, Invoice::count());
+        Tenancy::clear();
+    }
+
+    public function test_activate_command_rejects_an_unknown_salon(): void
+    {
+        $this->artisan('billing:activate', ['salon' => 'nope', 'plan' => 'basic'])
+            ->assertFailed();
     }
 
     public function test_widget_returns_an_embeddable_snippet(): void

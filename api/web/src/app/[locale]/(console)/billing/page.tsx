@@ -13,6 +13,8 @@ type Status = {
   trial_ends_at: string | null;
   on_trial: boolean;
   subscription: { plan: string; status: string; current_period_end: string | null } | null;
+  self_serve: boolean;
+  support: { whatsapp: string | null; phone: string | null };
 };
 type Plan = {
   key: string; name: string; price: number; vat: number; total: number;
@@ -43,6 +45,8 @@ export default function BillingPage() {
 
   const sub = status.data.subscription;
   const activeKey = sub?.status === "active" ? sub.plan : null;
+  const selfServe = status.data.self_serve;
+  const support = status.data.support;
 
   async function subscribe(key: string) {
     setBusy(key);
@@ -91,7 +95,7 @@ export default function BillingPage() {
           {sub?.status === "canceled" && sub.current_period_end && (
             <Badge tone="muted">{t("endsOn", { date: date(sub.current_period_end) })}</Badge>
           )}
-          {activeKey && (
+          {selfServe && activeKey && (
             <Button variant="danger" disabled={busy === "__cancel"} onClick={cancel}>
               {t("cancel")}
             </Button>
@@ -124,13 +128,43 @@ export default function BillingPage() {
                   </li>
                 ))}
               </ul>
-              <Button className="mt-5" disabled={active || busy === p.key} onClick={() => subscribe(p.key)}>
-                {busy === p.key ? c("saving") : active ? t("paid") : t("subscribe")}
-              </Button>
+              {selfServe && (
+                <Button className="mt-5" disabled={active || busy === p.key} onClick={() => subscribe(p.key)}>
+                  {busy === p.key ? c("saving") : active ? t("paid") : t("subscribe")}
+                </Button>
+              )}
             </Card>
           );
         })}
       </div>
+
+      {/* Manual-payment mode: no self-serve checkout, so tell them how to subscribe. */}
+      {!selfServe && (
+        <Card className="mt-4 flex flex-wrap items-center justify-between gap-4 p-5">
+          <p className="min-w-0 flex-1 text-sm text-ink">{t("subscribeOffline")}</p>
+          <div className="flex flex-wrap gap-2">
+            {support.whatsapp && (
+              <a
+                href={`https://wa.me/${support.whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center rounded-xl bg-accent px-4 py-2 text-sm font-medium text-on-accent"
+              >
+                {t("contactWhatsapp")}
+              </a>
+            )}
+            {support.phone && (
+              <a
+                href={`tel:${support.phone}`}
+                className="inline-flex min-h-10 items-center rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink"
+                dir="ltr"
+              >
+                {t("contactPhone")}
+              </a>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Invoices */}
       <h2 className="mb-3 mt-8 font-[family-name:var(--font-display)] text-lg font-semibold text-ink">{t("invoices")}</h2>

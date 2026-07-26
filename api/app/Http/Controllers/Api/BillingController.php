@@ -50,13 +50,24 @@ class BillingController extends Controller
         return response()->json([
             'plan' => $salon->plan,
             'trial_ends_at' => $salon->trial_ends_at,
-            'on_trial' => $salon->trial_ends_at?->isFuture() && ! ($subscription?->isActive()),
+            // On trial only until they first subscribe — a subscription (active or
+            // cancelled) supersedes the trial, so its badge shows instead.
+            'on_trial' => ! $subscription && $salon->trial_ends_at?->isFuture(),
             'subscription' => $subscription,
+            // When self-serve is off we collect payment offline; the console shows
+            // a "contact us" note instead of Subscribe/Cancel actions.
+            'self_serve' => (bool) config('payments.self_serve'),
+            'support' => [
+                'whatsapp' => config('payments.support.whatsapp'),
+                'phone' => config('payments.support.phone'),
+            ],
         ]);
     }
 
     public function subscribe(Request $request): JsonResponse
     {
+        abort_unless((bool) config('payments.self_serve'), 403, 'Online subscription is unavailable. Please contact us to activate your plan.');
+
         $salon = Salon::findOrFail(Tenancy::id());
 
         $data = $request->validate([
@@ -79,6 +90,8 @@ class BillingController extends Controller
 
     public function cancel(): JsonResponse
     {
+        abort_unless((bool) config('payments.self_serve'), 403, 'Please contact us to change your subscription.');
+
         $subscription = Subscription::firstOrFail();
         $this->billing->cancel($subscription);
 

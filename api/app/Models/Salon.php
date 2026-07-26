@@ -38,15 +38,17 @@ class Salon extends Model
     }
 
     /**
-     * Whether the salon may use the console: a subscription still within its
-     * paid period (active or cancelled-but-not-expired), or a live trial.
+     * Whether the salon may use the console. Once they've ever subscribed,
+     * access is governed solely by the paid period (active or
+     * cancelled-but-not-expired) — the free trial is consumed and no longer a
+     * fallback. Salons that never subscribed ride their live trial.
      */
     public function hasBillingAccess(): bool
     {
         // Fresh query (not the cached relation) so a just-created subscription counts.
         $sub = $this->subscription()->first();
-        if ($sub && $sub->current_period_end && $sub->current_period_end->isFuture()) {
-            return true;
+        if ($sub) {
+            return $sub->current_period_end !== null && $sub->current_period_end->isFuture();
         }
 
         return $this->trial_ends_at && $this->trial_ends_at->isFuture();
