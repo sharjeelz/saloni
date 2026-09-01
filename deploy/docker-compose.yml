@@ -1,0 +1,101 @@
+# Production/staging stack for Salooni — runs on the EC2 host at /srv/salon.
+#
+# Images (api, web) are built by CI and pulled from GHCR; their full refs
+# (incl. tag) and all app secrets come from the sibling .env file. Only Caddy
+# is exposed to the internet (:80/:443); everything else talks over the private
+# `internal` network. See deploy/README.md for first-time setup.
+
+name: salon
+
+services:
+  # --- PostgreSQL -----------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  # --- Laravel API (php-fpm + nginx on :8080) -------------------------------
+  api:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Persist uploaded logos/offer images across image redeploys.
+      - uploads:/var/www/html/storage/app/public
+    networks: [internal]
+
+  # --- Queue worker (notifications, AI menu import, etc.) --------------------
+  worker:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    env_file: .env
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/var/www/html/storage/app/public
+    networks: [internal]
+
+  # --- Scheduler (reminders every 15m, subscription renewals daily) ---------
+  scheduler:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    env_file: .env
+    command: php artisan schedule:work
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+  # --- Next.js frontend (standalone server on :3000) ------------------------
+  web:
+    image: ${WEB_IMAGE}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    networks: [internal]
+
+  # --- Caddy reverse proxy + automatic HTTPS --------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api, web]
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  db_data:
+  uploads:
+  caddy_data:
+  caddy_config:

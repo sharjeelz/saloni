@@ -1,0 +1,22 @@
+# Automatic HTTPS via Let's Encrypt. Domains + contact email come from the
+# environment (set in deploy/.env, passed through by docker-compose.yml).
+
+{
+	email {$ACME_EMAIL}
+}
+
+# API — https://api.<domain>
+{$API_DOMAIN} {
+	encode zstd gzip
+	# Uploads can be large (menu photos, logos); lift the default body limit.
+	request_body {
+		max_size 25MB
+	}
+	reverse_proxy api:8080
+}
+
+# Frontend — https://app.<domain>
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
