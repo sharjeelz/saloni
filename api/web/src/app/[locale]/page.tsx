@@ -33,6 +33,12 @@ export default function HomePage({
           <Link href="/login" className="text-sm font-medium text-ink hover:text-accent-ink">
             {nav("signIn")}
           </Link>
+          <Link
+            href="/signup"
+            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90"
+          >
+            {nav("getStarted")}
+          </Link>
           <LocaleSwitcher />
         </div>
       </header>
@@ -49,7 +55,7 @@ export default function HomePage({
           <p className="text-pretty text-lg text-muted">{t("subtitle")}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/login"
+              href="/signup"
               className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:opacity-90"
             >
               {t("ctaPrimary")}
