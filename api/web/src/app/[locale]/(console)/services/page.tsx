@@ -393,7 +393,13 @@ function ServiceStaffModal({ service, onClose, onSaved }: {
     try { await put(`/services/${service.id}/staff`, { staff_ids: [...selected] }); onSaved(); }
     catch { notify(c("error"), "error"); setBusy(false); }
   }
-  const toggle = (id: number) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggle = (id: number) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   const staffList = allStaff.data?.data ?? [];
   const failed = allStaff.error || detail.error;

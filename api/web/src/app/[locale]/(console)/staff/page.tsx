@@ -93,7 +93,6 @@ function StaffForm({ staff, onClose, onSaved }: {
 }) {
   const t = useTranslations("app.staff");
   const c = useTranslations("app.common");
-  const { notify } = useToast();
   const [form, setForm] = useState({
     name: staff?.name ?? "", phone: staff?.phone ?? "",
     email: staff?.email ?? "", title: staff?.title ?? "",

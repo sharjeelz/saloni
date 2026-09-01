@@ -224,7 +224,10 @@ function StaffModal({ branch, onClose, onSaved }: { branch: Branch; onClose: () 
   }
 
   const toggle = (id: number) => setSelected((s) => {
-    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
+    return n;
   });
 
   const staffList = allStaff.data?.data ?? [];

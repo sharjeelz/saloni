@@ -22,6 +22,9 @@ export default function LoginPage() {
     get("/auth/me")
       .then(() => live && router.replace("/dashboard"))
       .catch(() => live && setChecking(false)); // invalid token cleared by api()
+    return () => {
+      live = false;
+    };
   }, [router]);
 
   if (checking) {

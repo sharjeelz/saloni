@@ -49,6 +49,9 @@ export default function SignupPage() {
     get("/auth/me")
       .then(() => live && router.replace("/dashboard"))
       .catch(() => live && setChecking(false)); // invalid token cleared by api()
+    return () => {
+      live = false;
+    };
   }, [router]);
 
   function update(field: Field, value: string) {
