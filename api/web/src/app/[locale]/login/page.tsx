@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError, get, getToken, post, setToken } from "@/lib/api";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 
@@ -138,6 +138,13 @@ export default function LoginPage() {
               >
                 {busy ? t("signingIn") : t("submit")}
               </button>
+
+              <p className="text-center text-sm text-muted">
+                {t("noAccount")}{" "}
+                <Link href="/signup" className="font-medium text-accent hover:underline">
+                  {t("createAccount")}
+                </Link>
+              </p>
             </div>
           </form>
         </div>
