@@ -5,7 +5,8 @@
 # see deploy/README.md.
 set -euo pipefail
 
-cd /srv/salon
+# The compose project and its .env live in the repo clone's deploy/ dir.
+cd /srv/salon/deploy
 
 # Load POSTGRES_* from the same env file the stack uses.
 set -a; . ./.env; set +a

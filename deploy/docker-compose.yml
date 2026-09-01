@@ -1,9 +1,11 @@
-# Production/staging stack for Salooni — runs on the EC2 host at /srv/salon.
+# Production/staging stack for Salooni — runs on the Oracle A1 host from the
+# repo clone at /srv/salon (this file lives in /srv/salon/deploy).
 #
-# Images (api, web) are built by CI and pulled from GHCR; their full refs
-# (incl. tag) and all app secrets come from the sibling .env file. Only Caddy
-# is exposed to the internet (:80/:443); everything else talks over the private
-# `internal` network. See deploy/README.md for first-time setup.
+# The api and web images are built ON THIS HOST from the sibling source tree —
+# the box is natively ARM64, so builds are fast and no registry is involved.
+# All app secrets come from the sibling .env file. Only Caddy is exposed to the
+# internet (:80/:443); everything else talks over the private `internal`
+# network. See deploy/README.md for first-time setup.
 
 name: salon
 
@@ -28,7 +30,10 @@ services:
 
   # --- Laravel API (php-fpm + nginx on :8080) -------------------------------
   api:
-    image: ${API_IMAGE}
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    image: salooni/api:local
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -41,7 +46,12 @@ services:
 
   # --- Queue worker (notifications, AI menu import, etc.) --------------------
   worker:
-    image: ${API_IMAGE}
+    # Same build as `api`; Docker's layer cache makes the repeat a no-op, and
+    # declaring it means `up -d` works even without --build on a fresh host.
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    image: salooni/api:local
     restart: unless-stopped
     env_file: .env
     command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
@@ -54,7 +64,10 @@ services:
 
   # --- Scheduler (reminders every 15m, subscription renewals daily) ---------
   scheduler:
-    image: ${API_IMAGE}
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    image: salooni/api:local
     restart: unless-stopped
     env_file: .env
     command: php artisan schedule:work
@@ -65,7 +78,14 @@ services:
 
   # --- Next.js frontend (standalone server on :3000) ------------------------
   web:
-    image: ${WEB_IMAGE}
+    build:
+      context: ../api/web
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* is inlined into the client bundle at BUILD time, so it
+        # must be known here — it comes from the host .env, not the runtime env.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    image: salooni/web:local
     restart: unless-stopped
     environment:
       NODE_ENV: production

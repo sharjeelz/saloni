@@ -1,7 +1,8 @@
 name: Deploy · Staging
 
-# Staging tracks the develop branch. Builds the API and web images, pushes them
-# to GHCR, syncs the deploy/ manifests to the host, then rolls out the stack.
+# Staging tracks the develop branch. Images are built ON THE HOST (a native
+# ARM64 Ampere A1 box), so this workflow does no building at all — it just tells
+# the host to pull the new commit and rebuild. See deploy/README.md.
 on:
   push:
     branches: [develop]
@@ -11,117 +12,34 @@ concurrency:
   group: deploy-staging
   cancel-in-progress: true
 
-env:
-  API_IMAGE: ghcr.io/${{ github.repository }}/api
-  WEB_IMAGE: ghcr.io/${{ github.repository }}/web
-
 jobs:
-  build-api:
-    name: Build & push API image
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      # Required to build the linux/arm64 image on an x86 runner.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./api
-          file: ./api/Dockerfile
-          push: true
-          # The Oracle host is an Ampere A1 (ARM). Built under QEMU emulation on
-          # the x86 runner — slow on a cold cache, fine once type=gha warms up.
-          platforms: linux/arm64
-          tags: ${{ env.API_IMAGE }}:staging-${{ github.sha }},${{ env.API_IMAGE }}:staging-latest
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
-
-  build-web:
-    name: Build & push web image
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      # Required to build the linux/arm64 image on an x86 runner.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./api/web
-          file: ./api/web/Dockerfile
-          push: true
-          platforms: linux/arm64
-          # NEXT_PUBLIC_API_URL is inlined at build time — set it as a repo/
-          # environment variable (e.g. https://api.staging.yourdomain.com/api).
-          build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.STAGING_NEXT_PUBLIC_API_URL }}
-          tags: ${{ env.WEB_IMAGE }}:staging-${{ github.sha }},${{ env.WEB_IMAGE }}:staging-latest
-          cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
-
   deploy:
     name: Roll out to staging host
-    needs: [build-api, build-web]
     runs-on: ubuntu-latest
     # Only runs once the staging host secrets/vars are configured; else skips.
     if: ${{ vars.STAGING_ENABLED == 'true' }}
     steps:
-      - uses: actions/checkout@v4
-
-      # Keep the host's compose file + Caddyfile in lockstep with the repo.
-      - name: Sync deploy manifests to host
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.STAGING_SSH_HOST }}
-          username: ${{ secrets.STAGING_SSH_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          source: "deploy/docker-compose.yml,deploy/Caddyfile"
-          target: "/srv/salon"
-          strip_components: 1
-
-      - name: Pull images & roll out
+      - name: Pull & rebuild on the host
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          # 20 min: the first build compiles the Next.js bundle and installs
+          # Composer deps from scratch. Later builds hit Docker's layer cache.
+          command_timeout: 20m
           script: |
             set -e
             cd /srv/salon
-            docker compose pull
-            docker compose up -d
-            # Runtime artisan steps — run AFTER .env is present on the host.
+            git fetch origin develop
+            git reset --hard origin/develop
+
+            cd /srv/salon/deploy
+            # Builds api + web from the working tree, then recreates changed
+            # containers. NEXT_PUBLIC_API_URL is a build arg read from .env.
+            docker compose up -d --build
+
+            # Runtime artisan steps — .env is already on the host.
             docker compose exec -T api php artisan migrate --force
             docker compose exec -T api php artisan storage:link
             docker compose exec -T api php artisan config:cache
@@ -129,4 +47,7 @@ jobs:
             docker compose exec -T api php artisan view:cache
             # Tell the long-running worker to reload the new code.
             docker compose exec -T api php artisan queue:restart
+
+            # Reclaim space from superseded build layers — matters on a 50 GB
+            # boot volume when every deploy builds locally.
             docker image prune -f
