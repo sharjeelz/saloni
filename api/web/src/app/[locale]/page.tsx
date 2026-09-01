@@ -3,6 +3,7 @@ import { setRequestLocale } from "next-intl/server";
 import { use } from "react";
 import { Link } from "@/i18n/navigation";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
+import VisitorIp from "@/components/VisitorIp";
 
 const featureKeys = ["booking", "branches", "reminders"] as const;
 
@@ -90,6 +91,11 @@ export default function HomePage({
           ))}
         </section>
       </main>
+
+      {/* Footer */}
+      <footer className="flex items-center justify-center gap-2 px-6 py-6 sm:px-10">
+        <VisitorIp />
+      </footer>
     </div>
   );
 }
