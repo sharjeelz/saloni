@@ -15,11 +15,12 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
 # App code.
 COPY --chown=www-data:www-data . .
 
-# Finish autoloader & cache framework config/routes/views at build time.
-RUN composer dump-autoload --optimize \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# Finish the optimized autoloader. NOTE: we deliberately do NOT run
+# `php artisan config:cache` here — at build time there is no .env, so it would
+# bake empty/default config (wrong APP_URL, DB creds, keys) into the image.
+# config/route/view caching runs at DEPLOY time, after .env is in place
+# (see .github/workflows/deploy-staging.yml).
+RUN composer dump-autoload --optimize
 
 # serversideup base serves public/ on :8080 and runs php-fpm; no CMD needed.
 EXPOSE 8080
